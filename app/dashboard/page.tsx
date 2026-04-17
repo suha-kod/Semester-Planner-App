@@ -336,7 +336,6 @@ export default function DashboardPage() {
             />
             {/* Mental analysis sidebar */}
             <AnalysisSidebar>
-              <div className="text-xs font-semibold mb-3" style={{ color:'var(--text)' }}>Analysis</div>
               <div className="text-xs font-semibold mb-2" style={{ color:'var(--text3)' }}>Mood</div>
               {weekMentalStats.map(w => (
                 <div key={`mood-${w.weekNum}`} className="mb-2">
@@ -388,7 +387,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function GridSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-4 min-w-0">
+    <div className="flex gap-4 min-w-0" style={{ alignItems:'flex-start' }}>
       {children}
     </div>
   )
