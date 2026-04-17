@@ -14,6 +14,121 @@ import type { Unit, UnitType } from '@/types'
 const WEEKLY_COMPONENTS = ['Lecture','Tutorial','Lab','Reading','Ed lesson','Discussion post','Practice questions','Weekly quiz','Notes / revision','Workshop']
 const UNIT_COLOURS = ['#7c5cfc','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#a78bfa','#34d399']
 
+// ── Weekly Task Grid ──────────────────────────────────────────────────────────
+function WeeklyTaskGrid({ unit, weeklyLogs, curWeek, totalWeeks, toggleWeeklyItem }: {
+  unit: Unit
+  weeklyLogs: ReturnType<typeof useStore.getState>['weeklyLogs']
+  curWeek: number
+  totalWeeks: number
+  toggleWeeklyItem: (unitId: string, week: number, itemId: string) => void
+}) {
+  // All unique task labels (from the first week that has items)
+  const labels = useMemo(() => {
+    const seen = new Set<string>()
+    weeklyLogs.forEach(l => l.items.forEach(i => { if (!seen.has(i.label)) seen.add(i.label) }))
+    return Array.from(seen)
+  }, [weeklyLogs])
+
+  // Weeks that have logs configured, capped to totalWeeks
+  const weeks = useMemo(() =>
+    Array.from({ length: totalWeeks }, (_, i) => i + 1).filter(w => weeklyLogs.some(l => l.week === w)),
+    [weeklyLogs, totalWeeks]
+  )
+
+  function getItem(week: number, label: string) {
+    return weeklyLogs.find(l => l.week === week)?.items.find(i => i.label === label) ?? null
+  }
+
+  function colDone(week: number) {
+    const log = weeklyLogs.find(l => l.week === week)
+    if (!log) return { done: 0, total: 0 }
+    return { done: log.items.filter(i => i.done).length, total: log.items.length }
+  }
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 140 + weeks.length * 52 }}>
+        <colgroup>
+          <col style={{ width: 140 }} />
+          {weeks.map(w => <col key={w} style={{ width: 52 }} />)}
+        </colgroup>
+        <thead>
+          <tr>
+            <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Task
+            </th>
+            {weeks.map(w => {
+              const isCur = w === curWeek
+              const isFut = w > curWeek
+              return (
+                <th key={w} style={{
+                  textAlign: 'center', padding: '5px 2px', fontSize: 10, fontWeight: 700,
+                  color: isCur ? 'var(--accent)' : isFut ? 'var(--text3)' : 'var(--text2)',
+                  background: isCur ? 'var(--accent-glow)' : 'transparent',
+                  borderBottom: `2px solid ${isCur ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: '4px 4px 0 0',
+                }}>
+                  W{w}
+                </th>
+              )
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {labels.map((label) => (
+            <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '5px 8px', fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                {label}
+              </td>
+              {weeks.map(w => {
+                const item = getItem(w, label)
+                const isFut = w > curWeek
+                const isCur = w === curWeek
+                const done = item?.done ?? false
+                return (
+                  <td key={w} style={{ textAlign: 'center', padding: '4px 2px', background: isCur ? 'var(--accent-glow)' : 'transparent' }}>
+                    <button
+                      onClick={() => item && !isFut && toggleWeeklyItem(unit.id, w, item.id)}
+                      style={{
+                        width: 22, height: 22, borderRadius: 5, cursor: isFut || !item ? 'default' : 'pointer',
+                        background: done ? unit.colour : 'transparent',
+                        border: `1.5px solid ${done ? unit.colour : isFut ? 'var(--border)' : 'var(--border2)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        opacity: isFut ? 0.3 : 1, transition: 'all 0.12s',
+                        margin: '0 auto',
+                      }}>
+                      {done && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                    </button>
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+
+          {/* Footer: done/total per week */}
+          <tr style={{ borderTop: '2px solid var(--border2)' }}>
+            <td style={{ padding: '4px 8px', fontSize: 9, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase' }}>Done</td>
+            {weeks.map(w => {
+              const { done, total } = colDone(w)
+              const isCur = w === curWeek
+              const isFut = w > curWeek
+              const allDone = total > 0 && done === total
+              return (
+                <td key={w} style={{ textAlign: 'center', padding: '4px 2px', fontSize: 9,
+                  color: allDone ? 'var(--green)' : isFut ? 'var(--text3)' : 'var(--text2)',
+                  background: isCur ? 'var(--accent-glow)' : 'transparent',
+                }}>
+                  {done}/{total}
+                </td>
+              )
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function UnitsPage() {
   const units = useStore(s => s.units)
   const [showUnitForm, setShowUnitForm] = useState(false)
@@ -291,35 +406,13 @@ function UnitDetailModal({ unit, onClose, onEdit }: { unit: Unit; onClose: () =>
 
         {weeklyLogs.length === 0
           ? <p className="text-sm" style={{ color:'var(--text3)' }}>No tasks configured. Click Configure to set up weekly tracking.</p>
-          : Array.from({ length: semester?.totalWeeks ?? 13 }, (_, i) => i + 1)
-              .filter(w => weeklyLogs.some(l => l.week === w))
-              .map(w => {
-                const logs = weeklyLogs.filter(l => l.week === w)
-                const items = logs.flatMap(l => l.items)
-                const done = items.filter(i => i.done).length
-                const isFuture = w > curWeek
-                const isCurrent = w === curWeek
-                return (
-                  <div key={w} className="mb-4">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: isCurrent ? 'var(--accent)' : isFuture ? 'var(--text3)' : 'var(--text2)' }}>
-                        Week {w}
-                      </span>
-                      {isCurrent && <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background:'var(--accent-glow)', color:'var(--accent)' }}>current</span>}
-                      <span className="text-xs font-mono" style={{ color:'var(--text3)' }}>{done}/{items.length}</span>
-                    </div>
-                    {items.map(item => (
-                      <div key={item.id} className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer" style={{ background:'transparent', opacity: isFuture ? 0.6 : 1 }}
-                        onClick={()=>toggleWeeklyItem(unit.id, w, item.id)}>
-                        <div className="flex-shrink-0" style={{ width:18, height:18, borderRadius:5, border:`1.5px solid ${item.done?'var(--accent)':'var(--border2)'}`, background:item.done?'var(--accent)':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                          {item.done && <span style={{ color:'white', fontSize:10 }}>✓</span>}
-                        </div>
-                        <span className="text-sm" style={{ color:item.done?'var(--text3)':'var(--text)', textDecoration:item.done?'line-through':'none' }}>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })
+          : <WeeklyTaskGrid
+              unit={unit}
+              weeklyLogs={weeklyLogs}
+              curWeek={curWeek}
+              totalWeeks={semester?.totalWeeks ?? 13}
+              toggleWeeklyItem={toggleWeeklyItem}
+            />
         }
       </div>
 
