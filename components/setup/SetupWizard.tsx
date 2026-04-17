@@ -53,6 +53,7 @@ export function SetupWizard({ onComplete }: Props) {
   })
   const [totalWeeks, setTotalWeeks] = useState(13)
   const [gradeGoal, setGradeGoal] = useState('')
+  const [breakWeeks, setBreakWeeks] = useState<number[]>([])
 
   // Step 2 — units
   const [unitForms, setUnitForms] = useState([blankUnit(0)])
@@ -182,7 +183,7 @@ export function SetupWizard({ onComplete }: Props) {
 
       if (step === 5) {
         updateProfile({ name: name.trim(), studyDays, weeklyHoursTarget: weeklyHours, studyStyle })
-        updateSemester({ name: semName.trim(), startDate, endDate, totalWeeks, gradeGoal: gradeGoal as any })
+        updateSemester({ name: semName.trim(), startDate, endDate, totalWeeks, breakWeeks, gradeGoal: gradeGoal as any })
         const { addAssessment } = useStore.getState()
         savedUnits.forEach((unit, i) => {
           const extracts = extractedAssessments[i] ?? []
@@ -266,7 +267,7 @@ export function SetupWizard({ onComplete }: Props) {
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Teaching weeks">
+                <Field label="Teaching weeks (excl. breaks)">
                   <input type="number" className="input" value={totalWeeks} onChange={e => setTotalWeeks(parseInt(e.target.value) || 13)} min={1} max={30} />
                 </Field>
                 <Field label="Overall goal">
@@ -279,6 +280,37 @@ export function SetupWizard({ onComplete }: Props) {
                   </select>
                 </Field>
               </div>
+
+              {/* Break / non-teaching weeks */}
+              {startDate && endDate && (() => {
+                const calWeeks = Math.max(totalWeeks + 2, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (7 * 86400000)) + 1)
+                return (
+                  <div className="mt-1">
+                    <div className="text-xs font-semibold mb-1" style={{ color:'var(--text2)' }}>
+                      Mid-sem breaks / non-teaching weeks
+                    </div>
+                    <div className="text-xs mb-2" style={{ color:'var(--text3)' }}>
+                      Tick any calendar weeks (from semester start) that are breaks — Tracker skips these in the week counter.
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 p-3 rounded-xl" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+                      {Array.from({ length: calWeeks }, (_, i) => i + 1).map(w => {
+                        const checked = breakWeeks.includes(w)
+                        return (
+                          <label key={w} className="flex items-center gap-1 cursor-pointer" style={{ fontSize:11, color: checked ? 'var(--accent)' : 'var(--text2)' }}>
+                            <input type="checkbox" checked={checked} onChange={() => setBreakWeeks(p => checked ? p.filter(x => x !== w) : [...p, w].sort((a,b)=>a-b))} style={{ accentColor:'var(--accent)' }} />
+                            Wk {w}
+                          </label>
+                        )
+                      })}
+                    </div>
+                    {breakWeeks.length > 0 && (
+                      <div className="text-xs mt-1.5" style={{ color:'var(--accent)' }}>
+                        {breakWeeks.length} break week{breakWeeks.length !== 1 ? 's' : ''} selected · {totalWeeks} teaching weeks
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           )}
 

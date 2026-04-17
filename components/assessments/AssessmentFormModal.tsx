@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useStore } from '@/lib/store'
+import { useStore, useActiveSemester } from '@/lib/store'
 import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Field } from '@/components/ui/index'
 import { toast } from '@/components/ui/Toast'
@@ -9,9 +9,30 @@ import type { Assessment, AssessmentType, AssessmentStatus } from '@/types'
 
 const TYPES: AssessmentType[] = ['assignment','quiz','exam','midsem','lab','presentation','group','participation','hurdle','other']
 const STATUSES: AssessmentStatus[] = ['not-started','planned','in-progress','submitted','graded','overdue','complete']
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
+function teachingWeekDate(semStart: string, breakWeeks: number[], teachingWeek: number, dayName: string): string {
+  const start = new Date(semStart)
+  const dow = start.getDay()
+  const toMon = dow === 0 ? -6 : 1 - dow
+  const startMon = new Date(start)
+  startMon.setDate(start.getDate() + toMon)
+  let calWeek = 1, tWeek = 0
+  while (tWeek < teachingWeek) {
+    if (!breakWeeks.includes(calWeek)) tWeek++
+    if (tWeek === teachingWeek) break
+    calWeek++
+  }
+  const weekMon = new Date(startMon)
+  weekMon.setDate(startMon.getDate() + (calWeek - 1) * 7)
+  const dayIdx = DAYS.indexOf(dayName)
+  weekMon.setDate(weekMon.getDate() + (dayIdx === -1 ? 0 : dayIdx))
+  return weekMon.toISOString().split('T')[0]
+}
 
 export function AssessmentFormModal({ open, onClose, editing, defaultUnitId = '' }: { open: boolean; onClose: () => void; editing: Assessment | null; defaultUnitId?: string }) {
   const units = useStore(s => s.units)
+  const semester = useActiveSemester()
   const { addAssessment, updateAssessment } = useStore()
 
   const [name, setName]             = useState(editing?.name ?? '')
@@ -27,6 +48,12 @@ export function AssessmentFormModal({ open, onClose, editing, defaultUnitId = ''
   const [notes, setNotes]           = useState(editing?.notes ?? '')
   const [extracting, setExtracting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Weekly quiz state
+  const [isWeeklyQuiz, setIsWeeklyQuiz] = useState(false)
+  const [quizWeeks, setQuizWeeks] = useState<number[]>([])
+  const [quizDay, setQuizDay] = useState('Wednesday')
+  const [quizTime, setQuizTime] = useState('12:00')
 
   useEffect(() => {
     if (!open || editing) return
@@ -54,6 +81,10 @@ export function AssessmentFormModal({ open, onClose, editing, defaultUnitId = ''
     setMaxMark(editing?.maxMark?.toString() ?? '100')
     setRules(editing?.specialRules ?? '')
     setNotes(editing?.notes ?? '')
+    setIsWeeklyQuiz(false)
+    setQuizWeeks([])
+    setQuizDay('Wednesday')
+    setQuizTime('12:00')
   }, [editing, defaultUnitId])
 
   async function extractFromImages(files: File[]) {
@@ -105,6 +136,32 @@ export function AssessmentFormModal({ open, onClose, editing, defaultUnitId = ''
 
   function save() {
     if (!name.trim()) { toast('Name is required', 'error'); return }
+
+    // Weekly quiz: generate one assessment per selected week
+    if (isWeeklyQuiz && !editing) {
+      if (quizWeeks.length === 0) { toast('Select at least one week', 'error'); return }
+      const breaks = semester?.breakWeeks ?? []
+      const semStart = semester?.startDate ?? new Date().toISOString().split('T')[0]
+      const timeNote = quizTime ? ` · Due ${quizTime}` : ''
+      ;[...quizWeeks].sort((a,b)=>a-b).forEach(w => {
+        addAssessment({
+          name: `${name.trim()} — Week ${w}`,
+          unitId, type: 'quiz',
+          weight: parseFloat(weight) || 0,
+          status: 'not-started',
+          dueDate: teachingWeekDate(semStart, breaks, w, quizDay),
+          personalDueDate: null,
+          mark: null,
+          maxMark: parseFloat(maxMark) || 100,
+          specialRules: `${quizDay}${timeNote}${rules.trim() ? ` · ${rules.trim()}` : ''}`,
+          notes: notes.trim(),
+        })
+      })
+      toast(`Created ${quizWeeks.length} weekly quiz assessment${quizWeeks.length !== 1 ? 's' : ''}`, 'success')
+      onClose()
+      return
+    }
+
     const data: Omit<Assessment,'id'> = {
       name: name.trim(), unitId, type, weight: parseFloat(weight)||0, status,
       dueDate: dueDate||null, personalDueDate: personalDue||null,
@@ -153,10 +210,66 @@ export function AssessmentFormModal({ open, onClose, editing, defaultUnitId = ''
           </select>
         </Field>
       </div>
+      {/* Weekly quiz panel */}
+      {type === 'quiz' && !editing && (
+        <div className="rounded-xl p-4 mb-1" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+          <label className="flex items-center gap-2 cursor-pointer mb-3">
+            <input type="checkbox" checked={isWeeklyQuiz} onChange={e => setIsWeeklyQuiz(e.target.checked)} style={{ accentColor:'var(--accent)', width:14, height:14 }} />
+            <span className="text-sm font-semibold" style={{ color:'var(--text)' }}>Weekly quiz</span>
+            <span className="text-xs" style={{ color:'var(--text3)' }}>— generates one entry per selected week with computed due dates</span>
+          </label>
+
+          {isWeeklyQuiz && (
+            <>
+              <div className="text-xs font-semibold mb-2" style={{ color:'var(--text2)' }}>Which teaching weeks?</div>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {Array.from({ length: semester?.totalWeeks ?? 13 }, (_, i) => i + 1).map(w => {
+                  const sel = quizWeeks.includes(w)
+                  return (
+                    <button key={w} type="button"
+                      onClick={() => setQuizWeeks(p => sel ? p.filter(x => x !== w) : [...p, w])}
+                      style={{
+                        padding:'3px 9px', borderRadius:6, fontSize:11, cursor:'pointer', fontWeight: sel ? 600 : 400,
+                        background: sel ? 'var(--accent)' : 'var(--bg4)',
+                        color: sel ? '#fff' : 'var(--text2)',
+                        border: `1px solid ${sel ? 'var(--accent)' : 'var(--border2)'}`,
+                        transition:'all 0.12s',
+                      }}>W{w}</button>
+                  )
+                })}
+                <button type="button" onClick={() => setQuizWeeks(Array.from({length: semester?.totalWeeks ?? 13}, (_,i) => i+1))}
+                  style={{ padding:'3px 9px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--accent)', background:'transparent', border:'1px dashed var(--accent)' }}>All</button>
+                {quizWeeks.length > 0 && <button type="button" onClick={() => setQuizWeeks([])}
+                  style={{ padding:'3px 9px', borderRadius:6, fontSize:11, cursor:'pointer', color:'var(--text3)', background:'transparent', border:'1px dashed var(--border2)' }}>Clear</button>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Day of week">
+                  <select className="input" value={quizDay} onChange={e => setQuizDay(e.target.value)}>
+                    {DAYS.map(d => <option key={d}>{d}</option>)}
+                  </select>
+                </Field>
+                <Field label="Due time">
+                  <input type="time" className="input" value={quizTime} onChange={e => setQuizTime(e.target.value)} />
+                </Field>
+              </div>
+              {quizWeeks.length > 0 && (
+                <div className="text-xs mt-2" style={{ color:'var(--accent)' }}>
+                  Will create {quizWeeks.length} quiz{quizWeeks.length !== 1 ? 'zes' : ''} — "{name.trim() || 'Quiz'} — Week N" each due {quizDay} at {quizTime}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Date fields — hidden when weekly quiz handles dates automatically */}
+      {!(isWeeklyQuiz && type === 'quiz' && !editing) && (
       <div className="grid grid-cols-2 gap-3">
         <Field label="Official due date"><input type="date" className="input" value={dueDate} onChange={e=>setDueDate(e.target.value)} /></Field>
         <Field label="Personal target date"><input type="date" className="input" value={personalDue} onChange={e=>setPersonalDue(e.target.value)} /></Field>
       </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Mark received"><input type="number" className="input" value={mark} onChange={e=>setMark(e.target.value)} placeholder="Leave blank if unknown" min={0} /></Field>
         <Field label="Out of"><input type="number" className="input" value={maxMark} onChange={e=>setMaxMark(e.target.value)} min={1} /></Field>
