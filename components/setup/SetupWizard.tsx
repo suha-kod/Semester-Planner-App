@@ -4,7 +4,45 @@ import { useState, useRef } from 'react'
 import { useStore } from '@/lib/store'
 import { toast } from '../ui/Toast'
 import { Field, Pill } from '../ui/index'
-import type { Unit } from '@/types'
+import type { Unit, AssessmentType } from '@/types'
+
+const ASSESS_TYPES: AssessmentType[] = ['assignment','quiz','exam','midsem','lab','presentation','group','participation','hurdle','other']
+const DAYS_OF_WEEK = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
+interface AssessEntry {
+  id: string
+  name: string
+  type: AssessmentType
+  weight: string
+  dueDate: string
+  maxMark: string
+  specialRules: string
+  isWeeklyQuiz: boolean
+  quizWeeks: number[]
+  quizDay: string
+  quizTime: string
+}
+
+function blankAssess(id: string): AssessEntry {
+  return { id, name:'', type:'assignment', weight:'', dueDate:'', maxMark:'100', specialRules:'', isWeeklyQuiz:false, quizWeeks:[], quizDay:'Wednesday', quizTime:'12:00' }
+}
+
+function teachingWeekDate(semStart: string, breakWeeks: number[], teachingWeek: number, dayName: string): string {
+  const start = new Date(semStart)
+  const dow = start.getDay()
+  const toMon = dow === 0 ? -6 : 1 - dow
+  const startMon = new Date(start); startMon.setDate(start.getDate() + toMon)
+  let calWeek = 1, tWeek = 0
+  while (tWeek < teachingWeek) {
+    if (!breakWeeks.includes(calWeek)) tWeek++
+    if (tWeek === teachingWeek) break
+    calWeek++
+  }
+  const weekMon = new Date(startMon); weekMon.setDate(startMon.getDate() + (calWeek - 1) * 7)
+  const dayIdx = DAYS_OF_WEEK.indexOf(dayName)
+  weekMon.setDate(weekMon.getDate() + (dayIdx === -1 ? 0 : dayIdx))
+  return weekMon.toISOString().split('T')[0]
+}
 
 const UNIT_COLOURS = ['#ec4899','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#f9a8d4','#34d399']
 const HABIT_COLOURS = ['#ec4899','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#f9a8d4','#34d399','#fb923c','#e879f9']
@@ -42,7 +80,7 @@ export function SetupWizard({ onComplete }: Props) {
   const activeSemesterId = useStore(s => s.activeSemesterId)
 
   const [step, setStep] = useState(1)
-  const TOTAL = 5
+  const TOTAL = 6
 
   // Step 1 — profile + semester
   const [name, setName] = useState('')
@@ -58,7 +96,11 @@ export function SetupWizard({ onComplete }: Props) {
   // Step 2 — units
   const [unitForms, setUnitForms] = useState([blankUnit(0)])
 
-  // Step 3 — weekly structure per unit
+  // Step 3 — assessments per unit
+  const [unitAssessments, setUnitAssessments] = useState<Record<number, AssessEntry[]>>({})
+  const [activeAssessUnit, setActiveAssessUnit] = useState(0)
+
+  // Step 4 — weekly structure per unit
   const [savedUnits, setSavedUnits] = useState<Unit[]>([])
   const [weeklyUnit, setWeeklyUnit] = useState(0)
   const [weeklySelections, setWeeklySelections] = useState<Record<number, string[]>>({})
@@ -123,7 +165,6 @@ export function SetupWizard({ onComplete }: Props) {
       if (step === 2) {
         const valid = unitForms.filter(u => u.code.trim() && u.name.trim())
         if (valid.length === 0) { toast('Add at least one unit', 'error'); return }
-        // Delete any previously-saved placeholder units (e.g. if user went Back and edited)
         const { deleteUnit } = useStore.getState()
         savedUnits.forEach(u => deleteUnit(u.id))
         const added: Unit[] = []
@@ -142,6 +183,22 @@ export function SetupWizard({ onComplete }: Props) {
           added.push(newU)
         })
         setSavedUnits(added)
+        // Pre-populate assessments from extracted outlines
+        const initAssess: Record<number, AssessEntry[]> = {}
+        let vi = 0
+        unitForms.forEach((u, origIdx) => {
+          if (!u.code.trim() || !u.name.trim()) return
+          const extracted = extractedAssessments[origIdx] ?? []
+          initAssess[vi] = extracted.map((a: any, j: number) => ({
+            id: `ea_${vi}_${j}`, name: a.name ?? '', type: a.type ?? 'assignment',
+            weight: a.weight?.toString() ?? '0', dueDate: a.dueDate ?? '',
+            maxMark: a.maxMark?.toString() ?? '100', specialRules: a.specialRules ?? '',
+            isWeeklyQuiz: false, quizWeeks: [], quizDay: 'Wednesday', quizTime: '12:00',
+          }))
+          vi++
+        })
+        setUnitAssessments(initAssess)
+        setActiveAssessUnit(0)
         const initSel: Record<number, string[]> = {}
         added.forEach((_, i) => { initSel[i] = [] })
         setWeeklySelections(initSel)
@@ -150,6 +207,12 @@ export function SetupWizard({ onComplete }: Props) {
       }
 
       if (step === 3) {
+        // Assessments step — just advance (data lives in unitAssessments state)
+        setStep(4)
+        return
+      }
+
+      if (step === 4) {
         savedUnits.forEach((unit, i) => {
           const selected = weeklySelections[i] ?? []
           const customs = (weeklyCustom[i] ?? '').split(',').map(s => s.trim()).filter(Boolean)
@@ -160,12 +223,11 @@ export function SetupWizard({ onComplete }: Props) {
             }
           }
         })
-        setStep(4)
+        setStep(5)
         return
       }
 
-      if (step === 4) {
-        // Save habits: clear defaults, add user selections + custom
+      if (step === 5) {
         const { habits, deleteHabit, addHabit } = useStore.getState()
         const today = new Date().toISOString().split('T')[0]
         habits.forEach(h => deleteHabit(h.id))
@@ -173,22 +235,42 @@ export function SetupWizard({ onComplete }: Props) {
           ...SUGGESTED_HABITS.filter(s => selectedHabits.has(s.title)),
           ...customHabits,
         ]
-        allHabits.forEach((h, i) => {
+        allHabits.forEach((h) => {
           addHabit({ title: h.title, emoji: h.emoji, colour: h.colour, unitId: null, frequency: 'daily', targetCount: 1, active: true, createdAt: today })
         })
         updateProfile({ habitStartDate })
-        setStep(5)
+        setStep(6)
         return
       }
 
-      if (step === 5) {
+      if (step === 6) {
         updateProfile({ name: name.trim(), studyDays, weeklyHoursTarget: weeklyHours, studyStyle })
         updateSemester({ name: semName.trim(), startDate, endDate, totalWeeks, breakWeeks, gradeGoal: gradeGoal as any })
         const { addAssessment } = useStore.getState()
         savedUnits.forEach((unit, i) => {
-          const extracts = extractedAssessments[i] ?? []
-          extracts.forEach((a: any) => {
-            addAssessment({ name: a.name, unitId: unit.id, type: a.type ?? 'assignment', weight: a.weight ?? 0, status: 'not-started', dueDate: a.dueDate ?? null, personalDueDate: null, mark: null, maxMark: a.maxMark ?? 100, specialRules: a.specialRules ?? '', notes: '' })
+          const entries = unitAssessments[i] ?? []
+          entries.forEach(entry => {
+            if (!entry.name.trim()) return
+            if (entry.isWeeklyQuiz && entry.quizWeeks.length > 0) {
+              const timeNote = entry.quizTime ? ` · Due ${entry.quizTime}` : ''
+              ;[...entry.quizWeeks].sort((a,b)=>a-b).forEach(w => {
+                addAssessment({
+                  name: `${entry.name.trim()} — Week ${w}`, unitId: unit.id, type: 'quiz',
+                  weight: parseFloat(entry.weight) || 0, status: 'not-started',
+                  dueDate: teachingWeekDate(startDate, breakWeeks, w, entry.quizDay),
+                  personalDueDate: null, mark: null, maxMark: parseFloat(entry.maxMark) || 100,
+                  specialRules: `${entry.quizDay}${timeNote}${entry.specialRules ? ` · ${entry.specialRules}` : ''}`, notes: '',
+                })
+              })
+            } else {
+              addAssessment({
+                name: entry.name.trim(), unitId: unit.id, type: entry.type,
+                weight: parseFloat(entry.weight) || 0, status: 'not-started',
+                dueDate: entry.dueDate || null, personalDueDate: null,
+                mark: null, maxMark: parseFloat(entry.maxMark) || 100,
+                specialRules: entry.specialRules, notes: '',
+              })
+            }
           })
         })
         toast(`Welcome to Tracker, ${name || 'there'}! 🎓`, 'success')
@@ -390,10 +472,134 @@ export function SetupWizard({ onComplete }: Props) {
             </div>
           )}
 
-          {/* ── Step 3: Weekly structure ── */}
+          {/* ── Step 3: Assessments ── */}
           {step === 3 && (
             <div className="fade-in">
               <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 03 / 0{TOTAL}</div>
+              <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Assessments</h1>
+              <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
+                Add assessments for each unit. Tracker tracks deadlines, weights, and grades.
+              </p>
+
+              {/* Unit tabs */}
+              <div className="flex gap-2 flex-wrap mb-5">
+                {savedUnits.map((u, i) => (
+                  <button key={u.id} onClick={() => setActiveAssessUnit(i)} className="btn btn-sm" style={{
+                    background: activeAssessUnit === i ? 'var(--accent-glow)' : 'var(--bg3)',
+                    border: `1px solid ${activeAssessUnit === i ? 'var(--accent)' : 'var(--border2)'}`,
+                    color: activeAssessUnit === i ? 'var(--accent)' : 'var(--text2)',
+                  }}>{u.code}</button>
+                ))}
+              </div>
+
+              {/* Assessment list for active unit */}
+              {savedUnits[activeAssessUnit] && (() => {
+                const entries = unitAssessments[activeAssessUnit] ?? []
+                const setEntries = (fn: (prev: AssessEntry[]) => AssessEntry[]) =>
+                  setUnitAssessments(prev => ({ ...prev, [activeAssessUnit]: fn(prev[activeAssessUnit] ?? []) }))
+                const uid = `${activeAssessUnit}`
+
+                return (
+                  <div>
+                    {entries.length === 0 && (
+                      <p className="text-sm mb-4" style={{ color:'var(--text3)' }}>No assessments yet — add one below.</p>
+                    )}
+
+                    {entries.map((entry, ei) => (
+                      <div key={entry.id} className="rounded-xl p-4 mb-3" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <Field label="Assessment name">
+                            <input className="input" value={entry.name} placeholder="e.g. Assignment 1"
+                              onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, name:e.target.value} : x))} />
+                          </Field>
+                          <Field label="Type">
+                            <select className="input" value={entry.type}
+                              onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, type:e.target.value as AssessmentType, isWeeklyQuiz: e.target.value!=='quiz' ? false : x.isWeeklyQuiz} : x))}>
+                              {ASSESS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          </Field>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 mb-3">
+                          <Field label="Weight (%)">
+                            <input type="number" className="input" value={entry.weight} placeholder="30" min={0} max={100}
+                              onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, weight:e.target.value} : x))} />
+                          </Field>
+                          <Field label="Max mark">
+                            <input type="number" className="input" value={entry.maxMark} min={1}
+                              onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, maxMark:e.target.value} : x))} />
+                          </Field>
+                          {!entry.isWeeklyQuiz && (
+                            <Field label="Due date">
+                              <input type="date" className="input" value={entry.dueDate}
+                                onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, dueDate:e.target.value} : x))} />
+                            </Field>
+                          )}
+                        </div>
+
+                        {/* Weekly quiz toggle */}
+                        {entry.type === 'quiz' && (
+                          <div className="rounded-lg p-3 mb-2" style={{ background:'var(--bg4)', border:'1px solid var(--border)' }}>
+                            <label className="flex items-center gap-2 cursor-pointer mb-2">
+                              <input type="checkbox" checked={entry.isWeeklyQuiz} style={{ accentColor:'var(--accent)' }}
+                                onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, isWeeklyQuiz:e.target.checked} : x))} />
+                              <span className="text-xs font-semibold" style={{ color:'var(--text)' }}>Weekly quiz</span>
+                              <span className="text-xs" style={{ color:'var(--text3)' }}>generates one entry per selected week</span>
+                            </label>
+                            {entry.isWeeklyQuiz && (
+                              <>
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {Array.from({length: totalWeeks}, (_,i)=>i+1).map(w => {
+                                    const sel = entry.quizWeeks.includes(w)
+                                    return <button key={w} type="button"
+                                      onClick={() => setEntries(p => p.map((x,j) => j===ei ? {...x, quizWeeks: sel ? x.quizWeeks.filter(v=>v!==w) : [...x.quizWeeks,w]} : x))}
+                                      style={{ padding:'2px 7px', borderRadius:5, fontSize:10, cursor:'pointer',
+                                        background: sel ? 'var(--accent)' : 'var(--bg3)',
+                                        color: sel ? '#fff' : 'var(--text2)',
+                                        border:`1px solid ${sel ? 'var(--accent)' : 'var(--border2)'}` }}>W{w}</button>
+                                  })}
+                                  <button type="button" onClick={() => setEntries(p => p.map((x,j) => j===ei ? {...x, quizWeeks:Array.from({length:totalWeeks},(_,i)=>i+1)} : x))}
+                                    style={{ padding:'2px 7px', borderRadius:5, fontSize:10, cursor:'pointer', color:'var(--accent)', background:'transparent', border:'1px dashed var(--accent)' }}>All</button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Field label="Day">
+                                    <select className="input" value={entry.quizDay}
+                                      onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, quizDay:e.target.value} : x))}>
+                                      {DAYS_OF_WEEK.map(d => <option key={d}>{d}</option>)}
+                                    </select>
+                                  </Field>
+                                  <Field label="Time">
+                                    <input type="time" className="input" value={entry.quizTime}
+                                      onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, quizTime:e.target.value} : x))} />
+                                  </Field>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        <Field label="Special rules">
+                          <input className="input" value={entry.specialRules} placeholder="e.g. Must pass to pass unit"
+                            onChange={e => setEntries(p => p.map((x,j) => j===ei ? {...x, specialRules:e.target.value} : x))} />
+                        </Field>
+                        <button className="btn btn-danger btn-sm mt-2"
+                          onClick={() => setEntries(p => p.filter((_,j) => j !== ei))}>Remove</button>
+                      </div>
+                    ))}
+
+                    <button className="btn btn-secondary btn-sm"
+                      onClick={() => setEntries(p => [...p, blankAssess(`${uid}_${Date.now()}`)])}>
+                      + Add assessment
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* ── Step 4: Weekly structure ── */}
+          {step === 4 && (
+            <div className="fade-in">
+              <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 04 / 0{TOTAL}</div>
               <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Weekly structure</h1>
               <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
                 Select what you do each week per unit. Tracker auto-builds your weekly completion tracking from this.
@@ -432,10 +638,10 @@ export function SetupWizard({ onComplete }: Props) {
             </div>
           )}
 
-          {/* ── Step 4: Daily Habits ── */}
-          {step === 4 && (
+          {/* ── Step 5: Daily Habits ── */}
+          {step === 5 && (
             <div className="fade-in">
-              <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 04 / 0{TOTAL}</div>
+              <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 05 / 0{TOTAL}</div>
               <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Your daily habits</h1>
               <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
                 Pick the habits you want to track every day. You can always add, edit or remove them later.
@@ -515,10 +721,10 @@ export function SetupWizard({ onComplete }: Props) {
             </div>
           )}
 
-          {/* ── Step 5: Preferences ── */}
-          {step === 5 && (
+          {/* ── Step 6: Preferences ── */}
+          {step === 6 && (
             <div className="fade-in">
-              <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 05 / 0{TOTAL}</div>
+              <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 06 / 0{TOTAL}</div>
               <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Study preferences</h1>
               <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
                 Helps calibrate the planner and recommendations to how you actually work.
