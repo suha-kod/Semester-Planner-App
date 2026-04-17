@@ -90,31 +90,37 @@ function AreaChart({ data, n }: { data: number[]; n: number }) {
 }
 
 function DualLineChart({ moodData, motData, n }: { moodData: number[]; motData: number[]; n: number }) {
-  const W=900,H=120,PL=36,PR=80,PT=10,PB=24
+  const W=300,H=90,PL=22,PR=8,PT=6,PB=6
   const cW=W-PL-PR, cH=H-PT-PB
   const xS=(i:number)=>PL+(n>1?i/(n-1):0)*cW
   const yS=(v:number)=>PT+cH-(v/10)*cH
-  const moodPts  = moodData.map((v,i)=>({v,i})).filter(p=>p.v>0)
-  const motPts   = motData.map((v,i)=>({v,i})).filter(p=>p.v>0)
-  const grid = [0,2,4,6,8,10]
+  const moodPts = moodData.map((v,i)=>({v,i})).filter(p=>p.v>0)
+  const motPts  = motData.map((v,i)=>({v,i})).filter(p=>p.v>0)
+  const grid = [0,5,10]
   const moodLine = moodPts.map((p,i)=>`${i===0?'M':'L'}${xS(p.i)} ${yS(p.v)}`).join(' ')
   const motLine  = motPts.map((p,i)=>`${i===0?'M':'L'}${xS(p.i)} ${yS(p.v)}`).join(' ')
+  const hasData  = moodPts.length >= 2 || motPts.length >= 2
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:'block'}}>
-      {grid.map(v=>(
-        <g key={v}>
-          <line x1={PL} y1={yS(v)} x2={W-PR} y2={yS(v)} stroke="var(--border)" strokeWidth={0.5}/>
-          <text x={PL-4} y={yS(v)+3} textAnchor="end" fontSize={9} fill="var(--text3)">{v}</text>
-        </g>
-      ))}
-      {moodPts.length>=2 && <path d={moodLine} fill="none" stroke="#60a5fa" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>}
-      {motPts.length>=2  && <path d={motLine}  fill="none" stroke="#2dd4a0" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>}
+    <div>
       {/* Legend */}
-      <circle cx={W-PR+8} cy={PT+8}  r={4} fill="#60a5fa"/>
-      <text   x={W-PR+15} y={PT+12} fontSize={9} fill="var(--text3)">Mood</text>
-      <circle cx={W-PR+8} cy={PT+24} r={4} fill="#2dd4a0"/>
-      <text   x={W-PR+15} y={PT+28} fontSize={9} fill="var(--text3)">Motivation</text>
-    </svg>
+      <div className="flex items-center gap-3 mb-1 px-1">
+        <div className="flex items-center gap-1"><div style={{ width:8,height:8,borderRadius:'50%',background:'#60a5fa' }}/><span style={{ fontSize:9,color:'var(--text3)' }}>Mood</span></div>
+        <div className="flex items-center gap-1"><div style={{ width:8,height:8,borderRadius:'50%',background:'#2dd4a0' }}/><span style={{ fontSize:9,color:'var(--text3)' }}>Motivation</span></div>
+      </div>
+      {!hasData
+        ? <div style={{ height:40, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'var(--text3)' }}>No data yet</div>
+        : <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:'block' }}>
+            {grid.map(v=>(
+              <g key={v}>
+                <line x1={PL} y1={yS(v)} x2={W-PR} y2={yS(v)} stroke="var(--border)" strokeWidth={0.5}/>
+                <text x={PL-3} y={yS(v)+3} textAnchor="end" fontSize={8} fill="var(--text3)">{v}</text>
+              </g>
+            ))}
+            {moodPts.length>=2 && <path d={moodLine} fill="none" stroke="#60a5fa" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}
+            {motPts.length>=2  && <path d={motLine}  fill="none" stroke="#2dd4a0" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}
+          </svg>
+      }
+    </div>
   )
 }
 
@@ -324,7 +330,7 @@ export default function DashboardPage() {
             <p className="text-xs mt-0.5" style={{ color:'var(--text3)' }}>Track your daily mood and motivation (tap any cell to rate 1–10)</p>
           </div>
 
-          <GridSection title="Mental State">
+          <div className="flex gap-4 min-w-0" style={{ alignItems:'flex-start' }}>
             <MentalStateGrid
               weeks={weeks}
               days={days}
@@ -334,38 +340,41 @@ export default function DashboardPage() {
               scoreData={scoreData}
               setMoodEntry={setMoodEntry}
             />
-            {/* Mental analysis sidebar */}
-            <AnalysisSidebar>
+            {/* Right panel: analysis bars + chart together */}
+            <div style={{ width:230, flexShrink:0 }}>
+              <div className="text-sm font-semibold mb-3 text-right" style={{ color:'var(--text)' }}>Analysis</div>
+
               <div className="text-xs font-semibold mb-2" style={{ color:'var(--text3)' }}>Mood</div>
               {weekMentalStats.map(w => (
                 <div key={`mood-${w.weekNum}`} className="mb-2">
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-0.5">
                     <span className="text-xs" style={{ color:'var(--text3)' }}>Week {w.weekNum}</span>
                     <span className="text-xs font-mono" style={{ color: w.color }}>{w.hasData ? `${w.moodPct}%` : '—'}</span>
                   </div>
-                  <div className="overflow-hidden rounded-full" style={{ height:7, background:'var(--bg4)' }}>
+                  <div className="overflow-hidden rounded-full" style={{ height:6, background:'var(--bg4)' }}>
                     <div className="h-full rounded-full" style={{ width:`${w.moodPct}%`, background: w.color }} />
                   </div>
                 </div>
               ))}
-              <div className="text-xs font-semibold mt-4 mb-2" style={{ color:'var(--text3)' }}>Motivation</div>
+
+              <div className="text-xs font-semibold mt-3 mb-2" style={{ color:'var(--text3)' }}>Motivation</div>
               {weekMentalStats.map(w => (
                 <div key={`mot-${w.weekNum}`} className="mb-2">
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-0.5">
                     <span className="text-xs" style={{ color:'var(--text3)' }}>Week {w.weekNum}</span>
                     <span className="text-xs font-mono" style={{ color: w.color }}>{w.hasData ? `${w.motPct}%` : '—'}</span>
                   </div>
-                  <div className="overflow-hidden rounded-full" style={{ height:7, background:'var(--bg4)' }}>
+                  <div className="overflow-hidden rounded-full" style={{ height:6, background:'var(--bg4)' }}>
                     <div className="h-full rounded-full" style={{ width:`${w.motPct}%`, background: w.color }} />
                   </div>
                 </div>
               ))}
-            </AnalysisSidebar>
-          </GridSection>
 
-          {/* Dual line chart */}
-          <div className="mt-4 rounded-xl px-4 pt-3 pb-2" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
-            <DualLineChart moodData={moodChartData} motData={motChartData} n={35} />
+              {/* Dual line chart inline */}
+              <div className="mt-4 rounded-xl px-2 pt-3 pb-1" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+                <DualLineChart moodData={moodChartData} motData={motChartData} n={35} />
+              </div>
+            </div>
           </div>
         </>
       )}
