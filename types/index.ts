@@ -94,10 +94,34 @@ export interface PlannerTask {
   name: string
   date: string            // YYYY-MM-DD
   unitId: string | null
+  assessmentId?: string | null
   priority: Priority
   estimatedHours: number
   done: boolean
+  status?: 'not-started' | 'in-progress' | 'complete'
+  notes?: string
   aiGenerated: boolean
+}
+
+export type HabitFrequency = 'daily' | 'weekly'
+
+export interface Habit {
+  id: string
+  title: string
+  unitId: string | null
+  frequency: HabitFrequency
+  targetCount: number     // completions expected per day (usually 1)
+  colour: string          // hex
+  emoji: string
+  active: boolean
+  createdAt: string       // YYYY-MM-DD
+}
+
+export interface HabitCheckIn {
+  id: string
+  habitId: string
+  date: string            // YYYY-MM-DD
+  count: number           // how many times completed on this date
 }
 
 export interface AppData {
@@ -110,6 +134,8 @@ export interface AppData {
   weeklyLogs: WeeklyLog[]
   studyHours: StudyHour[]
   plannerTasks: PlannerTask[]
+  habits: Habit[]
+  habitCheckIns: HabitCheckIn[]
 }
 
 // Derived / computed types

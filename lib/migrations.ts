@@ -1,6 +1,6 @@
 // lib/migrations.ts
 
-import type { AppData, Profile, Semester } from '@/types'
+import type { AppData, Profile, Semester, Habit } from '@/types'
 
 export const CURRENT_VERSION = 1
 
@@ -31,8 +31,16 @@ export function defaultSemester(): Semester {
   }
 }
 
+export const DEFAULT_HABITS: Omit<Habit, 'id' | 'createdAt'>[] = [
+  { title: 'Lecture', unitId: null, frequency: 'daily', targetCount: 1, colour: '#7c5cfc', emoji: '📖', active: true },
+  { title: 'Tutorial', unitId: null, frequency: 'weekly', targetCount: 1, colour: '#2dd4a0', emoji: '💡', active: true },
+  { title: 'Notes', unitId: null, frequency: 'daily', targetCount: 1, colour: '#60a5fa', emoji: '✍️', active: true },
+  { title: 'Practice questions', unitId: null, frequency: 'daily', targetCount: 1, colour: '#f5a623', emoji: '🧠', active: true },
+]
+
 export function defaultAppData(): AppData {
   const sem = defaultSemester()
+  const today = new Date().toISOString().split('T')[0]
   return {
     version: CURRENT_VERSION,
     profile: defaultProfile(),
@@ -43,26 +51,32 @@ export function defaultAppData(): AppData {
     weeklyLogs: [],
     studyHours: [],
     plannerTasks: [],
+    habits: DEFAULT_HABITS.map((h, i) => ({ ...h, id: `habit_default_${i}`, createdAt: today })),
+    habitCheckIns: [],
   }
 }
 
 // Add new migrations here as the schema evolves.
-// Each migration receives the previous data shape and returns the new one.
-// This ensures users upgrading from older versions never lose data.
 export function migrateData(raw: AppData): AppData {
-  let data = { ...raw }
+  let data = { ...raw } as any
 
   // v0 → v1: ensure breakWeeks exists on all semesters
   if (!data.version || data.version < 1) {
-    data.semesters = data.semesters.map(s => ({
-      ...s,
-      breakWeeks: s.breakWeeks ?? [],
-    }))
+    data.semesters = data.semesters.map((s: any) => ({ ...s, breakWeeks: s.breakWeeks ?? [] }))
     data.version = 1
   }
 
-  // Future migrations go here:
-  // if (data.version < 2) { ... data.version = 2 }
+  // Always ensure new top-level arrays exist (safe for any version)
+  if (!data.habits) data.habits = []
+  if (!data.habitCheckIns) data.habitCheckIns = []
 
-  return data
+  // Ensure planner tasks have new optional fields
+  data.plannerTasks = (data.plannerTasks || []).map((t: any) => ({
+    assessmentId: null,
+    status: t.done ? 'complete' : 'not-started',
+    notes: '',
+    ...t,
+  }))
+
+  return data as AppData
 }

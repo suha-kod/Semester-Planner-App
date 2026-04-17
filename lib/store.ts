@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import type {
   AppData, Profile, Semester, Unit, Assessment,
   WeeklyLog, WeeklyItem, StudyHour, PlannerTask,
+  Habit, HabitCheckIn,
 } from '@/types'
 import { defaultAppData } from './migrations'
 import { loadFromDB, saveToDB } from './db'
@@ -51,6 +52,12 @@ interface TrackerStore extends AppData {
   updatePlannerTask: (id: string, patch: Partial<PlannerTask>) => void
   deletePlannerTask: (id: string) => void
 
+  // Habits
+  addHabit: (h: Omit<Habit, 'id'>) => Habit
+  updateHabit: (id: string, patch: Partial<Habit>) => void
+  deleteHabit: (id: string) => void
+  setHabitCheckIn: (habitId: string, date: string, count: number) => void
+
   // Data management
   importData: (data: AppData) => void
   resetAll: () => void
@@ -79,6 +86,8 @@ export const useStore = create<TrackerStore>((set, get) => ({
       weeklyLogs: state.weeklyLogs,
       studyHours: state.studyHours,
       plannerTasks: state.plannerTasks,
+      habits: state.habits,
+      habitCheckIns: state.habitCheckIns,
     }
     saveToDB(data)
   },
@@ -215,6 +224,41 @@ export const useStore = create<TrackerStore>((set, get) => ({
 
   deletePlannerTask: (id) => {
     set(s => ({ plannerTasks: s.plannerTasks.filter(t => t.id !== id) }))
+    get().persist()
+  },
+
+  // ── Habits ─────────────────────────────────────────────────────────────────
+  addHabit: (h) => {
+    const newHabit: Habit = { ...h, id: uid() }
+    set(s => ({ habits: [...s.habits, newHabit] }))
+    get().persist()
+    return newHabit
+  },
+
+  updateHabit: (id, patch) => {
+    set(s => ({ habits: s.habits.map(h => h.id === id ? { ...h, ...patch } : h) }))
+    get().persist()
+  },
+
+  deleteHabit: (id) => {
+    set(s => ({
+      habits: s.habits.filter(h => h.id !== id),
+      habitCheckIns: s.habitCheckIns.filter(c => c.habitId !== id),
+    }))
+    get().persist()
+  },
+
+  setHabitCheckIn: (habitId, date, count) => {
+    set(s => {
+      const existing = s.habitCheckIns.find(c => c.habitId === habitId && c.date === date)
+      if (count === 0) {
+        return { habitCheckIns: s.habitCheckIns.filter(c => !(c.habitId === habitId && c.date === date)) }
+      }
+      if (existing) {
+        return { habitCheckIns: s.habitCheckIns.map(c => c.habitId === habitId && c.date === date ? { ...c, count } : c) }
+      }
+      return { habitCheckIns: [...s.habitCheckIns, { id: uid(), habitId, date, count }] }
+    })
     get().persist()
   },
 
