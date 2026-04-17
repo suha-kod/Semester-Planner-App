@@ -7,6 +7,26 @@ import { Field, Pill } from '../ui/index'
 import type { Unit } from '@/types'
 
 const UNIT_COLOURS = ['#7c5cfc','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#a78bfa','#34d399']
+const HABIT_COLOURS = ['#7c5cfc','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#a78bfa','#34d399','#fb923c','#e879f9']
+
+const SUGGESTED_HABITS: { emoji: string; title: string; colour: string }[] = [
+  { emoji:'⏰', title:'Wake up early',    colour:'#f5a623' },
+  { emoji:'🏃', title:'Exercise',         colour:'#2dd4a0' },
+  { emoji:'📖', title:'Read',             colour:'#60a5fa' },
+  { emoji:'✍️', title:'Journal',          colour:'#a78bfa' },
+  { emoji:'🧘', title:'Meditate',         colour:'#34d399' },
+  { emoji:'📵', title:'No phone in AM',   colour:'#f472b6' },
+  { emoji:'🚿', title:'Cold shower',      colour:'#60a5fa' },
+  { emoji:'🎯', title:'Plan top 3',       colour:'#f5a623' },
+  { emoji:'💪', title:'Deep work',        colour:'#7c5cfc' },
+  { emoji:'💧', title:'Drink water',      colour:'#2dd4a0' },
+  { emoji:'🥗', title:'Healthy eating',   colour:'#34d399' },
+  { emoji:'😴', title:'Sleep by 11pm',    colour:'#a78bfa' },
+  { emoji:'📚', title:'Lecture',          colour:'#7c5cfc' },
+  { emoji:'💡', title:'Tutorial',         colour:'#2dd4a0' },
+  { emoji:'🧠', title:'Practice Qs',      colour:'#f05252' },
+  { emoji:'🖊️', title:'Revision notes',  colour:'#60a5fa' },
+]
 
 const WEEKLY_COMPONENTS = [
   'Lecture','Tutorial','Lab','Reading','Ed lesson',
@@ -22,7 +42,7 @@ export function SetupWizard({ onComplete }: Props) {
   const activeSemesterId = useStore(s => s.activeSemesterId)
 
   const [step, setStep] = useState(1)
-  const TOTAL = 4
+  const TOTAL = 5
 
   // Step 1 — profile + semester
   const [name, setName] = useState('')
@@ -43,7 +63,14 @@ export function SetupWizard({ onComplete }: Props) {
   const [weeklySelections, setWeeklySelections] = useState<Record<number, string[]>>({})
   const [weeklyCustom, setWeeklyCustom] = useState<Record<number, string>>({})
 
-  // Step 4 — preferences
+  // Step 4 — daily habits
+  const [selectedHabits, setSelectedHabits] = useState<Set<string>>(
+    new Set(['Wake up early','Exercise','Read','Deep work'])
+  )
+  const [customHabitInput, setCustomHabitInput] = useState('')
+  const [customHabits, setCustomHabits] = useState<{ emoji: string; title: string; colour: string }[]>([])
+
+  // Step 5 — preferences
   const [studyDays, setStudyDays] = useState(['Mon','Tue','Wed','Thu','Fri'])
   const [weeklyHours, setWeeklyHours] = useState(20)
   const [studyStyle, setStudyStyle] = useState<'early'|'steady'|'deadline'|'exam'>('deadline')
@@ -136,6 +163,22 @@ export function SetupWizard({ onComplete }: Props) {
       }
 
       if (step === 4) {
+        // Save habits: clear defaults, add user selections + custom
+        const { habits, deleteHabit, addHabit } = useStore.getState()
+        const today = new Date().toISOString().split('T')[0]
+        habits.forEach(h => deleteHabit(h.id))
+        const allHabits = [
+          ...SUGGESTED_HABITS.filter(s => selectedHabits.has(s.title)),
+          ...customHabits,
+        ]
+        allHabits.forEach((h, i) => {
+          addHabit({ title: h.title, emoji: h.emoji, colour: h.colour, unitId: null, frequency: 'daily', targetCount: 1, active: true, createdAt: today })
+        })
+        setStep(5)
+        return
+      }
+
+      if (step === 5) {
         updateProfile({ name: name.trim(), studyDays, weeklyHoursTarget: weeklyHours, studyStyle })
         updateSemester({ name: semName.trim(), startDate, endDate, totalWeeks, gradeGoal: gradeGoal as any })
         const { addAssessment } = useStore.getState()
@@ -344,10 +387,84 @@ export function SetupWizard({ onComplete }: Props) {
             </div>
           )}
 
-          {/* ── Step 4: Preferences ── */}
+          {/* ── Step 4: Daily Habits ── */}
           {step === 4 && (
             <div className="fade-in">
               <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 04 / 0{TOTAL}</div>
+              <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Your daily habits</h1>
+              <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
+                Pick the habits you want to track every day. You can always add, edit or remove them later.
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 mb-5">
+                {SUGGESTED_HABITS.map(s => {
+                  const on = selectedHabits.has(s.title)
+                  return (
+                    <button key={s.title}
+                      onClick={() => setSelectedHabits(prev => {
+                        const n = new Set(prev)
+                        n.has(s.title) ? n.delete(s.title) : n.add(s.title)
+                        return n
+                      })}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all"
+                      style={{
+                        background: on ? s.colour + '22' : 'var(--bg3)',
+                        border: `1.5px solid ${on ? s.colour : 'var(--border2)'}`,
+                        color: on ? s.colour : 'var(--text2)',
+                      }}>
+                      <span style={{ fontSize:18 }}>{s.emoji}</span>
+                      <span style={{ fontSize:13, fontWeight:500 }}>{s.title}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Custom habits */}
+              <div className="rounded-xl p-4" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+                <p className="text-xs mb-3" style={{ color:'var(--text3)' }}>Add a custom habit</p>
+                <div className="flex gap-2">
+                  <input
+                    className="input flex-1"
+                    value={customHabitInput}
+                    onChange={e => setCustomHabitInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && customHabitInput.trim()) {
+                        setCustomHabits(prev => [...prev, { emoji:'🎯', title: customHabitInput.trim(), colour: HABIT_COLOURS[prev.length % HABIT_COLOURS.length] }])
+                        setCustomHabitInput('')
+                      }
+                    }}
+                    placeholder="e.g. Drink 2L water, No junk food..."
+                  />
+                  <button className="btn btn-secondary btn-sm" onClick={() => {
+                    if (customHabitInput.trim()) {
+                      setCustomHabits(prev => [...prev, { emoji:'🎯', title: customHabitInput.trim(), colour: HABIT_COLOURS[prev.length % HABIT_COLOURS.length] }])
+                      setCustomHabitInput('')
+                    }
+                  }}>Add</button>
+                </div>
+                {customHabits.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {customHabits.map((h, i) => (
+                      <span key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
+                        style={{ background: h.colour + '22', border:`1px solid ${h.colour}`, color: h.colour }}>
+                        {h.emoji} {h.title}
+                        <button onClick={() => setCustomHabits(prev => prev.filter((_,j)=>j!==i))} style={{ background:'none',border:'none',cursor:'pointer',color:'inherit',padding:0,marginLeft:2,fontSize:11 }}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 text-xs" style={{ color:'var(--text3)' }}>
+                {selectedHabits.size + customHabits.length} habit{selectedHabits.size + customHabits.length !== 1 ? 's' : ''} selected
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 5: Preferences ── */}
+          {step === 5 && (
+            <div className="fade-in">
+              <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 05 / 0{TOTAL}</div>
               <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Study preferences</h1>
               <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
                 Helps calibrate the planner and recommendations to how you actually work.
