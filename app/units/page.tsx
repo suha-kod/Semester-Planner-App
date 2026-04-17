@@ -410,7 +410,7 @@ function UnitDetailModal({ unit, onClose, onEdit }: { unit: Unit; onClose: () =>
                 <div className="text-sm font-medium" style={{ color:'var(--text)' }}>{a.name}</div>
                 <div className="text-xs mt-0.5" style={{ color:'var(--text3)' }}>{a.type} · {a.weight}% weight{a.specialRules?` · ${a.specialRules}`:''}</div>
               </div>
-              <CountdownChip dateStr={a.dueDate} />
+              <CountdownChip dateStr={a.dueDate} status={a.status} />
               {a.mark !== null && a.mark !== undefined && <span className="font-mono text-sm" style={{ color:'var(--teal)' }}>{a.mark}/{a.maxMark}</span>}
               <StatusBadge status={a.status} />
             </div>

@@ -66,9 +66,11 @@ export function StatusBadge({ status }: { status: AssessmentStatus }) {
 }
 
 // ── Countdown chip ───────────────────────────────────────────────────────────
-export function CountdownChip({ dateStr }: { dateStr: string | null | undefined }) {
+const DONE_STATUSES = ['submitted', 'graded', 'complete']
+export function CountdownChip({ dateStr, status }: { dateStr: string | null | undefined; status?: string }) {
   const days = daysUntil(dateStr)
   if (days === null) return <span className="chip chip-future">TBA</span>
+  if (days < 0 && status && DONE_STATUSES.includes(status)) return null
   if (days < 0)  return <span className="chip chip-urgent">Overdue</span>
   if (days === 0) return <span className="chip chip-urgent">TODAY</span>
   if (days <= 2)  return <span className="chip chip-urgent">{days}d</span>

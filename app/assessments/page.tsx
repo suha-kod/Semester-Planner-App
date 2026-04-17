@@ -114,7 +114,7 @@ export default function AssessmentsPage() {
                       <td style={{ padding:'12px 14px', color:'var(--text2)', textTransform:'capitalize' }}>{a.type}</td>
                       <td style={{ padding:'12px 14px', fontFamily:'var(--font-mono)', color:'var(--text)' }}>{a.weight}%</td>
                       <td style={{ padding:'12px 14px' }}>
-                        {a.dueDate?<><div style={{ color:'var(--text)', fontSize:12 }}>{fmtDate(a.dueDate)}</div><CountdownChip dateStr={a.dueDate} /></>:<span style={{ color:'var(--text3)' }}>TBA</span>}
+                        {a.dueDate?<><div style={{ color:'var(--text)', fontSize:12 }}>{fmtDate(a.dueDate)}</div><CountdownChip dateStr={a.dueDate} status={a.status} /></>:<span style={{ color:'var(--text3)' }}>TBA</span>}
                       </td>
                       <td style={{ padding:'12px 14px', fontFamily:'var(--font-mono)' }}>
                         {hasMark?<span style={{ color:markPct!>=70?'var(--green)':markPct!>=50?'var(--amber)':'var(--red)' }}>{a.mark}/{a.maxMark} <span style={{ fontSize:11, color:'var(--text3)' }}>({markPct}%)</span></span>:<span style={{ color:'var(--text3)' }}>—</span>}
