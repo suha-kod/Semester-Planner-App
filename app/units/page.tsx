@@ -362,23 +362,6 @@ function UnitDetailModal({ unit, onClose, onEdit }: { unit: Unit; onClose: () =>
         </div>
       )}
 
-      {/* Assessments */}
-      <SectionHeading>Assessments</SectionHeading>
-      {assessments.length === 0
-        ? <p className="text-sm mb-4" style={{ color:'var(--text3)' }}>No assessments added for this unit.</p>
-        : assessments.map(a => (
-          <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl mb-2" style={{ background:'var(--bg3)' }}>
-            <div className="flex-1">
-              <div className="text-sm font-medium" style={{ color:'var(--text)' }}>{a.name}</div>
-              <div className="text-xs mt-0.5" style={{ color:'var(--text3)' }}>{a.type} · {a.weight}% weight{a.specialRules?` · ${a.specialRules}`:''}</div>
-            </div>
-            <CountdownChip dateStr={a.dueDate} />
-            {a.mark !== null && a.mark !== undefined && <span className="font-mono text-sm" style={{ color:'var(--teal)' }}>{a.mark}/{a.maxMark}</span>}
-            <StatusBadge status={a.status} />
-          </div>
-        ))
-      }
-
       {/* Weekly tasks */}
       <div className="mt-5">
         <SectionHeading action={<button className="btn btn-ghost btn-sm" onClick={()=>setShowWeeklySetup(s=>!s)}>Configure</button>}>
@@ -413,6 +396,25 @@ function UnitDetailModal({ unit, onClose, onEdit }: { unit: Unit; onClose: () =>
               totalWeeks={semester?.totalWeeks ?? 13}
               toggleWeeklyItem={toggleWeeklyItem}
             />
+        }
+      </div>
+
+      {/* Assessments */}
+      <div className="mt-5">
+        <SectionHeading>Assessments</SectionHeading>
+        {assessments.length === 0
+          ? <p className="text-sm mb-4" style={{ color:'var(--text3)' }}>No assessments added for this unit.</p>
+          : assessments.map(a => (
+            <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl mb-2" style={{ background:'var(--bg3)' }}>
+              <div className="flex-1">
+                <div className="text-sm font-medium" style={{ color:'var(--text)' }}>{a.name}</div>
+                <div className="text-xs mt-0.5" style={{ color:'var(--text3)' }}>{a.type} · {a.weight}% weight{a.specialRules?` · ${a.specialRules}`:''}</div>
+              </div>
+              <CountdownChip dateStr={a.dueDate} />
+              {a.mark !== null && a.mark !== undefined && <span className="font-mono text-sm" style={{ color:'var(--teal)' }}>{a.mark}/{a.maxMark}</span>}
+              <StatusBadge status={a.status} />
+            </div>
+          ))
         }
       </div>
 

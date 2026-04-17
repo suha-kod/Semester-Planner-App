@@ -15,9 +15,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useStore, useActiveSemester } from '@/lib/store'
 import { currentWeekNumber, daysUntil, isoFromDate } from '@/lib/weeks'
 import { computeUnitRisk, computeCurrentMark, computeProjectedMark, neededMarkForTarget } from '@/lib/risk'
+import { buildPriorityList, generateRecommendations } from '@/lib/priority'
 import { StatCard, RiskBadge, ProgressBar, SectionHeading, EmptyState } from '@/components/ui/index'
+import type { PriorityItem } from '@/types'
 
-const TABS = ['overview','hours','grades','risk'] as const
+const TABS = ['overview','priorities','hours','grades','risk'] as const
 type Tab = typeof TABS[number]
 
 export default function InsightsPage() {
@@ -40,14 +42,159 @@ export default function InsightsPage() {
         ))}
       </div>
 
-      {tab === 'overview' && <OverviewTab />}
-      {tab === 'hours'    && <HoursTab />}
-      {tab === 'grades'   && <GradesTab />}
-      {tab === 'risk'     && <RiskTab />}
+      {tab === 'overview'    && <OverviewTab />}
+      {tab === 'priorities'  && <PrioritiesTab />}
+      {tab === 'hours'       && <HoursTab />}
+      {tab === 'grades'      && <GradesTab />}
+      {tab === 'risk'        && <RiskTab />}
     </div>
   )
 }
 
+// ── Alert banner ─────────────────────────────────────────────────────────────
+function AlertBanner({ level, text }: { level: 'critical'|'urgent'|'soon'|'ok'; text: string }) {
+  const s = {
+    critical: { bg:'rgba(240,82,82,0.12)',  border:'rgba(240,82,82,0.25)',  color:'var(--red)',   icon:'🔴' },
+    urgent:   { bg:'rgba(245,166,35,0.12)', border:'rgba(245,166,35,0.25)', color:'var(--amber)', icon:'🟠' },
+    soon:     { bg:'rgba(96,165,250,0.12)', border:'rgba(96,165,250,0.25)', color:'var(--text2)', icon:'📅' },
+    ok:       { bg:'rgba(45,212,160,0.10)', border:'rgba(45,212,160,0.20)', color:'var(--green)', icon:'✅' },
+  }[level]
+  return (
+    <div className="flex items-start gap-2.5 p-3 rounded-xl text-sm" style={{ background:s.bg, border:`1px solid ${s.border}`, color:s.color }}>
+      <span className="flex-shrink-0">{s.icon}</span>
+      <span style={{ lineHeight:1.5 }}>{text}</span>
+    </div>
+  )
+}
+
+// ── Priority row ──────────────────────────────────────────────────────────────
+function PriorityRow({ item, rank }: { item: PriorityItem; rank: number }) {
+  const uc = item.urgency === 'urgent' ? 'var(--red)' : item.urgency === 'soon' ? 'var(--amber)' : 'var(--text3)'
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+        style={{ background: rank<=3?'var(--accent-glow)':'var(--bg4)', color: rank<=3?'var(--accent)':'var(--text3)' }}>
+        {rank}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate" style={{ color:'var(--text)' }}>{item.name}</div>
+        <div className="text-xs mt-0.5" style={{ color:'var(--text3)' }}>{item.meta}</div>
+      </div>
+      {item.urgency && (
+        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
+          style={{ background:uc+'18', color:uc, border:`1px solid ${uc}33` }}>
+          {item.urgency}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ── Priorities Tab ────────────────────────────────────────────────────────────
+function PrioritiesTab() {
+  const units      = useStore(s => s.units)
+  const assessments= useStore(s => s.assessments)
+  const weeklyLogs = useStore(s => s.weeklyLogs)
+  const semester   = useActiveSemester()
+  const curWeek    = currentWeekNumber(semester)
+
+  const priorities = buildPriorityList(assessments, units, weeklyLogs, curWeek)
+  const recs       = generateRecommendations(units, assessments, weeklyLogs, curWeek)
+
+  const overdue = assessments.filter(a => {
+    const d = daysUntil(a.dueDate)
+    return d !== null && d < 0 && !['submitted','graded','complete'].includes(a.status)
+  })
+  const urgent = assessments.filter(a => {
+    const d = daysUntil(a.dueDate)
+    return d !== null && d >= 0 && d <= 3 && !['submitted','graded','complete'].includes(a.status)
+  }).sort((a,b) => daysUntil(a.dueDate)! - daysUntil(b.dueDate)!)
+  const dueSoon = assessments.filter(a => {
+    const d = daysUntil(a.dueDate)
+    return d !== null && d > 3 && d <= 7 && !['submitted','graded','complete'].includes(a.status)
+  })
+  const atRisk = units
+    .map(u => ({ u, r: computeUnitRisk(u, assessments.filter(a=>a.unitId===u.id), weeklyLogs, curWeek) }))
+    .filter(x => x.r.level === 'high' || x.r.level === 'critical')
+
+  const allClear = overdue.length===0 && urgent.length===0 && atRisk.length===0
+
+  return (
+    <div className="grid gap-5" style={{ gridTemplateColumns:'1fr 340px' }}>
+      {/* Left: priority list */}
+      <div>
+        <SectionHeading>What to focus on now</SectionHeading>
+        {priorities.length === 0
+          ? <p className="text-sm mb-6" style={{ color:'var(--text3)' }}>Nothing urgent right now. Stay on top of weekly tasks.</p>
+          : <div className="space-y-2 mb-6">
+              {priorities.map((p,i) => <PriorityRow key={i} item={p} rank={i+1} />)}
+            </div>
+        }
+
+        <SectionHeading>Suggestions</SectionHeading>
+        <div className="space-y-2">
+          {recs.map((r,i) => (
+            <div key={i} className="p-3.5 rounded-xl text-sm" style={{ background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text2)', lineHeight:1.6 }}>
+              {r}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: alerts + upcoming */}
+      <div>
+        <SectionHeading>Smart alerts</SectionHeading>
+        <div className="space-y-2 mb-6">
+          {allClear && <AlertBanner level="ok" text="All clear! No overdue items, urgent deadlines, or high-risk units." />}
+          {overdue.map(a => {
+            const unit = units.find(u=>u.id===a.unitId)
+            const d = Math.abs(daysUntil(a.dueDate)!)
+            return <AlertBanner key={a.id} level="critical" text={`"${a.name}"${unit?` (${unit.code})`:''} is overdue by ${d} day${d!==1?'s':''}. Submit or speak to your lecturer.`} />
+          })}
+          {urgent.map(a => {
+            const unit = units.find(u=>u.id===a.unitId)
+            const d = daysUntil(a.dueDate)!
+            return <AlertBanner key={a.id} level="urgent" text={`"${a.name}"${unit?` (${unit.code})`:''} is due ${d===0?'TODAY':`in ${d} day${d!==1?'s':''}`}. Top priority.`} />
+          })}
+          {dueSoon.map(a => {
+            const unit = units.find(u=>u.id===a.unitId)
+            const d = daysUntil(a.dueDate)!
+            return <AlertBanner key={a.id} level="soon" text={`"${a.name}"${unit?` (${unit.code})`:''} due in ${d} days.`} />
+          })}
+          {atRisk.map(({u,r}) => (
+            <AlertBanner key={u.id} level="urgent" text={`${u.code} is ${r.level} risk — ${r.reasons[0]||'needs attention'}.`} />
+          ))}
+        </div>
+
+        <SectionHeading>Upcoming deadlines</SectionHeading>
+        {assessments
+          .filter(a => { const d=daysUntil(a.dueDate); return d!==null&&d>=0&&d<=21&&!['submitted','graded','complete'].includes(a.status) })
+          .sort((a,b) => daysUntil(a.dueDate)!-daysUntil(b.dueDate)!)
+          .slice(0,8)
+          .map(a => {
+            const unit = units.find(u=>u.id===a.unitId)
+            const d = daysUntil(a.dueDate)!
+            const col = d<=2?'var(--red)':d<=7?'var(--amber)':'var(--text3)'
+            return (
+              <div key={a.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom:'1px solid var(--border)' }}>
+                <div className="font-mono text-sm font-bold min-w-8" style={{ color:col }}>{d}d</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate" style={{ color:'var(--text)' }}>{a.name}</div>
+                  <div className="text-xs" style={{ color:'var(--text3)' }}>{unit?.code} · {a.weight}% weight</div>
+                </div>
+              </div>
+            )
+          })
+        }
+        {assessments.filter(a=>{const d=daysUntil(a.dueDate);return d!==null&&d>=0&&d<=21&&!['submitted','graded','complete'].includes(a.status)}).length===0 && (
+          <p className="text-sm" style={{ color:'var(--text3)' }}>Nothing due in the next 21 days.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Overview Tab ──────────────────────────────────────────────────────────────
 function OverviewTab() {
   const units = useStore(s => s.units)
   const assessments = useStore(s => s.assessments)

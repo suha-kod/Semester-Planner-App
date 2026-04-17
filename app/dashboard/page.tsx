@@ -45,7 +45,7 @@ function MoodPicker({ value, onPick, weekColor, isFuture }: {
       </button>
       {open && (
         <div style={{
-          position:'absolute', top:24, left:'50%', transform:'translateX(-50%)',
+          position:'absolute', bottom:26, left:'50%', transform:'translateX(-50%)',
           zIndex:100, background:'var(--bg2)', border:'1px solid var(--border2)',
           borderRadius:8, padding:6, display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:3,
           boxShadow:'0 8px 32px rgba(0,0,0,0.6)',
@@ -90,7 +90,7 @@ function AreaChart({ data, n }: { data: number[]; n: number }) {
 }
 
 function DualLineChart({ moodData, motData, n }: { moodData: number[]; motData: number[]; n: number }) {
-  const W=300,H=90,PL=22,PR=8,PT=6,PB=6
+  const W=700,H=100,PL=22,PR=8,PT=8,PB=8
   const cW=W-PL-PR, cH=H-PT-PB
   const xS=(i:number)=>PL+(n>1?i/(n-1):0)*cW
   const yS=(v:number)=>PT+cH-(v/10)*cH
@@ -99,7 +99,7 @@ function DualLineChart({ moodData, motData, n }: { moodData: number[]; motData: 
   const grid = [0,5,10]
   const moodLine = moodPts.map((p,i)=>`${i===0?'M':'L'}${xS(p.i)} ${yS(p.v)}`).join(' ')
   const motLine  = motPts.map((p,i)=>`${i===0?'M':'L'}${xS(p.i)} ${yS(p.v)}`).join(' ')
-  const hasData  = moodPts.length >= 2 || motPts.length >= 2
+  const hasData  = moodPts.length >= 1 || motPts.length >= 1
   return (
     <div>
       {/* Legend */}
@@ -117,7 +117,9 @@ function DualLineChart({ moodData, motData, n }: { moodData: number[]; motData: 
               </g>
             ))}
             {moodPts.length>=2 && <path d={moodLine} fill="none" stroke="#60a5fa" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}
+            {moodPts.length===1 && <circle cx={xS(moodPts[0].i)} cy={yS(moodPts[0].v)} r={3} fill="#60a5fa"/>}
             {motPts.length>=2  && <path d={motLine}  fill="none" stroke="#2dd4a0" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>}
+            {motPts.length===1 && <circle cx={xS(motPts[0].i)} cy={yS(motPts[0].v)} r={3} fill="#2dd4a0"/>}
           </svg>
       }
     </div>
@@ -331,16 +333,22 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex gap-4 min-w-0" style={{ alignItems:'flex-start' }}>
-            <MentalStateGrid
-              weeks={weeks}
-              days={days}
-              dayWeekMap={dayWeekMap}
-              todayISO={todayISO}
-              moodMap={moodMap}
-              scoreData={scoreData}
-              setMoodEntry={setMoodEntry}
-            />
-            {/* Right panel: analysis bars + chart together */}
+            {/* Left: grid with chart embedded directly below */}
+            <div className="flex-1 min-w-0">
+              <MentalStateGrid
+                weeks={weeks}
+                days={days}
+                dayWeekMap={dayWeekMap}
+                todayISO={todayISO}
+                moodMap={moodMap}
+                scoreData={scoreData}
+                setMoodEntry={setMoodEntry}
+                moodChartData={moodChartData}
+                motChartData={motChartData}
+              />
+            </div>
+
+            {/* Right panel: analysis bars only */}
             <div style={{ width:230, flexShrink:0 }}>
               <div className="text-sm font-semibold mb-3 text-right" style={{ color:'var(--text)' }}>Analysis</div>
 
@@ -369,11 +377,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
-
-              {/* Dual line chart inline */}
-              <div className="mt-4 rounded-xl px-2 pt-3 pb-1" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
-                <DualLineChart moodData={moodChartData} motData={motChartData} n={35} />
-              </div>
             </div>
           </div>
         </>
@@ -529,7 +532,7 @@ function HabitGrid({ weeks, days, dayWeekMap, activeHabits, todayISO, isChecked,
 }
 
 // ─── Mental State Grid ────────────────────────────────────────────────────────
-function MentalStateGrid({ weeks, days, dayWeekMap, todayISO, moodMap, scoreData, setMoodEntry }: {
+function MentalStateGrid({ weeks, days, dayWeekMap, todayISO, moodMap, scoreData, setMoodEntry, moodChartData, motChartData }: {
   weeks: { days: Date[]; weekNum: number; color: string }[]
   days: Date[]
   dayWeekMap: Record<string, { wi: number; color: string }>
@@ -537,9 +540,12 @@ function MentalStateGrid({ weeks, days, dayWeekMap, todayISO, moodMap, scoreData
   moodMap: Record<string, { mood: number; motivation: number }>
   scoreData: number[]
   setMoodEntry: (date: string, mood: number, motivation: number) => void
+  moodChartData: number[]
+  motChartData: number[]
 }) {
   return (
-    <div className="flex-1 min-w-0 overflow-x-auto">
+    <div className="min-w-0">
+    <div className="overflow-x-auto">
       <table style={{ borderCollapse:'collapse', tableLayout:'fixed', minWidth: 160 + 35*24 }}>
         <colgroup>
           <col style={{ width:160 }}/>
@@ -629,6 +635,11 @@ function MentalStateGrid({ weeks, days, dayWeekMap, todayISO, moodMap, scoreData
           </tr>
         </tbody>
       </table>
+    </div>
+    {/* Chart directly below the grid rows, same width */}
+    <div className="mt-2 rounded-xl px-4 pt-3 pb-2" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+      <DualLineChart moodData={moodChartData} motData={motChartData} n={35} />
+    </div>
     </div>
   )
 }
