@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh -T git@github.com)",
+      "Bash(ssh-keygen -R github.com)",
+      "Bash(curl -s https://api.github.com/meta)",
+      "Bash(python3 -c \"import sys,json; keys=json.load\\(sys.stdin\\)['ssh_keys']; [print\\('github.com '+k\\) for k in keys]\")"
+    ]
+  }
+}
