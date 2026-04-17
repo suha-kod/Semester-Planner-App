@@ -14,7 +14,7 @@ ChartJS.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip)
 import { useState, useEffect, useRef } from 'react'
 import { useStore, useActiveSemester } from '@/lib/store'
 import { currentWeekNumber, daysUntil, isoFromDate } from '@/lib/weeks'
-import { computeUnitRisk, computeCurrentMark, computeProjectedMark, neededMarkForTarget } from '@/lib/risk'
+import { computeUnitRisk, computeCurrentMark, computeProjectedMark, neededMarkForTarget, resolveEffectiveWeights } from '@/lib/risk'
 import { buildPriorityList, generateRecommendations } from '@/lib/priority'
 import { StatCard, RiskBadge, ProgressBar, SectionHeading, EmptyState } from '@/components/ui/index'
 import type { PriorityItem } from '@/types'
@@ -363,8 +363,9 @@ function GradesTab() {
         const mark = computeCurrentMark(uAssess)
         const projected = computeProjectedMark(uAssess)
         const needed = neededMarkForTarget(u, uAssess)
-        const gradedW = uAssess.filter(a=>a.mark!==null&&a.mark!==undefined).reduce((s,a)=>s+(a.weight||0),0)
-        const totalW = uAssess.reduce((s,a)=>s+(a.weight||0),0)
+        const resolved = resolveEffectiveWeights(uAssess)
+        const gradedW = resolved.filter(a=>a.mark!==null&&a.mark!==undefined&&a.weight>0).reduce((s,a)=>s+(a.weight||0),0)
+        const totalW = resolved.reduce((s,a)=>s+(a.weight||0),0)
 
         return (
           <div key={u.id} className="card">

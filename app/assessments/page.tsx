@@ -6,7 +6,7 @@ import { fmtDate, daysUntil, currentWeekNumber } from '@/lib/weeks'
 import { StatusBadge, CountdownChip, EmptyState, ConfirmDialog } from '@/components/ui/index'
 import { toast } from '@/components/ui/Toast'
 import { PlusIcon, TrashIcon } from '@/components/layout/Icons'
-import { computeUnitRisk } from '@/lib/risk'
+import { computeUnitRisk, effectiveWeight, parseBestOf } from '@/lib/risk'
 import { AssessmentFormModal } from '@/components/assessments/AssessmentFormModal'
 import type { Assessment, AssessmentType, AssessmentStatus } from '@/types'
 
@@ -112,7 +112,11 @@ export default function AssessmentsPage() {
                       </td>
                       <td style={{ padding:'12px 14px' }}><span className="chip chip-future text-xs">{unit?.code??'—'}</span></td>
                       <td style={{ padding:'12px 14px', color:'var(--text2)', textTransform:'capitalize' }}>{a.type}</td>
-                      <td style={{ padding:'12px 14px', fontFamily:'var(--font-mono)', color:'var(--text)' }}>{a.weight}%</td>
+                      <td style={{ padding:'12px 14px', fontFamily:'var(--font-mono)', color:'var(--text)' }}>
+                        {parseBestOf(a.specialRules)
+                          ? <><span>{effectiveWeight(a).toFixed(2).replace(/\.?0+$/, '')}%</span><span style={{ fontSize:10, color:'var(--text3)', marginLeft:4 }}>({a.weight}% total)</span></>
+                          : <>{a.weight}%</>}
+                      </td>
                       <td style={{ padding:'12px 14px' }}>
                         {a.dueDate?<><div style={{ color:'var(--text)', fontSize:12 }}>{fmtDate(a.dueDate)}</div><CountdownChip dateStr={a.dueDate} status={a.status} /></>:<span style={{ color:'var(--text3)' }}>TBA</span>}
                       </td>
