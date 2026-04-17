@@ -237,9 +237,20 @@ export function SetupWizard({ onComplete }: Props) {
             <div className="fade-in">
               <div className="text-xs font-mono mb-2" style={{ color: 'var(--accent)' }}>STEP 01 / 0{TOTAL}</div>
               <h1 className="font-serif text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>Welcome to Tracker</h1>
-              <p className="text-sm mb-8" style={{ color: 'var(--text2)' }}>
+              <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
                 Let's set up your semester in about 5 minutes. Everything can be edited later.
               </p>
+
+              {/* Existing data shortcut */}
+              <div className="rounded-xl p-4 mb-8 flex items-center justify-between gap-4" style={{ background:'var(--bg3)', border:'1px solid var(--border)' }}>
+                <div>
+                  <div className="text-sm font-medium mb-0.5" style={{ color:'var(--text)' }}>Already have data?</div>
+                  <div className="text-xs" style={{ color:'var(--text3)' }}>Skip setup and paste your backup in Settings.</div>
+                </div>
+                <button className="btn btn-secondary btn-sm" style={{ whiteSpace:'nowrap' }} onClick={onComplete}>
+                  Skip setup →
+                </button>
+              </div>
               <Field label="Your name">
                 <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Suha" />
               </Field>
