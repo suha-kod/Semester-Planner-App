@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { DM_Sans, DM_Mono, Fraunces } from 'next/font/google'
 import './globals.css'
 import { AppShell } from '@/components/layout/AppShell'
@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   title: 'Tracker — Semester HQ',
   description: 'Your intelligent university semester command centre',
   manifest: '/manifest.json',
+}
+
+export const viewport: Viewport = {
   themeColor: '#0f0f11',
 }
 
