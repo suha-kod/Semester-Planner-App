@@ -6,23 +6,23 @@ import { toast } from '../ui/Toast'
 import { Field, Pill } from '../ui/index'
 import type { Unit } from '@/types'
 
-const UNIT_COLOURS = ['#7c5cfc','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#a78bfa','#34d399']
-const HABIT_COLOURS = ['#7c5cfc','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#a78bfa','#34d399','#fb923c','#e879f9']
+const UNIT_COLOURS = ['#3b82f6','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#93c5fd','#34d399']
+const HABIT_COLOURS = ['#3b82f6','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#93c5fd','#34d399','#fb923c','#e879f9']
 
 const SUGGESTED_HABITS: { emoji: string; title: string; colour: string }[] = [
   { emoji:'⏰', title:'Wake up early',    colour:'#f5a623' },
   { emoji:'🏃', title:'Exercise',         colour:'#2dd4a0' },
   { emoji:'📖', title:'Read',             colour:'#60a5fa' },
-  { emoji:'✍️', title:'Journal',          colour:'#a78bfa' },
+  { emoji:'✍️', title:'Journal',          colour:'#93c5fd' },
   { emoji:'🧘', title:'Meditate',         colour:'#34d399' },
   { emoji:'📵', title:'No phone in AM',   colour:'#f472b6' },
   { emoji:'🚿', title:'Cold shower',      colour:'#60a5fa' },
   { emoji:'🎯', title:'Plan top 3',       colour:'#f5a623' },
-  { emoji:'💪', title:'Deep work',        colour:'#7c5cfc' },
+  { emoji:'💪', title:'Deep work',        colour:'#3b82f6' },
   { emoji:'💧', title:'Drink water',      colour:'#2dd4a0' },
   { emoji:'🥗', title:'Healthy eating',   colour:'#34d399' },
-  { emoji:'😴', title:'Sleep by 11pm',    colour:'#a78bfa' },
-  { emoji:'📚', title:'Lecture',          colour:'#7c5cfc' },
+  { emoji:'😴', title:'Sleep by 11pm',    colour:'#93c5fd' },
+  { emoji:'📚', title:'Lecture',          colour:'#3b82f6' },
   { emoji:'💡', title:'Tutorial',         colour:'#2dd4a0' },
   { emoji:'🧠', title:'Practice Qs',      colour:'#f05252' },
   { emoji:'🖊️', title:'Revision notes',  colour:'#60a5fa' },

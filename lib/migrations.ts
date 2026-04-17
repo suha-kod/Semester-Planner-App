@@ -35,7 +35,7 @@ export function defaultSemester(): Semester {
 }
 
 export const DEFAULT_HABITS: Omit<Habit, 'id' | 'createdAt'>[] = [
-  { title: 'Lecture', unitId: null, frequency: 'daily', targetCount: 1, colour: '#7c5cfc', emoji: '📖', active: true },
+  { title: 'Lecture', unitId: null, frequency: 'daily', targetCount: 1, colour: '#3b82f6', emoji: '📖', active: true },
   { title: 'Tutorial', unitId: null, frequency: 'weekly', targetCount: 1, colour: '#2dd4a0', emoji: '💡', active: true },
   { title: 'Notes', unitId: null, frequency: 'daily', targetCount: 1, colour: '#60a5fa', emoji: '✍️', active: true },
   { title: 'Practice questions', unitId: null, frequency: 'daily', targetCount: 1, colour: '#f5a623', emoji: '🧠', active: true },

@@ -30,9 +30,9 @@ export default {
           bg4:  '#d5cdc0',
         },
         accent: {
-          DEFAULT: '#7c5cfc',
-          dim:    'rgba(124,92,252,0.15)',
-          dark:   '#5e3fde',
+          DEFAULT: '#3b82f6',
+          dim:    'rgba(59,130,246,0.15)',
+          dark:   '#1d4ed8',
         },
         risk: {
           low:      '#4ade80',
