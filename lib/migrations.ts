@@ -2,6 +2,8 @@
 
 import type { AppData, Profile, Semester, Habit } from '@/types'
 
+const TODAY = new Date().toISOString().split('T')[0]
+
 export const CURRENT_VERSION = 1
 
 export function defaultProfile(): Profile {
@@ -12,6 +14,7 @@ export function defaultProfile(): Profile {
     studyStyle: 'deadline',
     remindDays: 3,
     theme: 'dark',
+    habitStartDate: TODAY,
   }
 }
 
@@ -53,6 +56,7 @@ export function defaultAppData(): AppData {
     plannerTasks: [],
     habits: DEFAULT_HABITS.map((h, i) => ({ ...h, id: `habit_default_${i}`, createdAt: today })),
     habitCheckIns: [],
+    moodEntries: [],
   }
 }
 
@@ -69,6 +73,8 @@ export function migrateData(raw: AppData): AppData {
   // Always ensure new top-level arrays exist (safe for any version)
   if (!data.habits) data.habits = []
   if (!data.habitCheckIns) data.habitCheckIns = []
+  if (!data.moodEntries) data.moodEntries = []
+  if (!data.profile.habitStartDate) data.profile.habitStartDate = TODAY
 
   // Ensure planner tasks have new optional fields
   data.plannerTasks = (data.plannerTasks || []).map((t: any) => ({

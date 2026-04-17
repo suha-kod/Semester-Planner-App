@@ -69,6 +69,7 @@ export function SetupWizard({ onComplete }: Props) {
   )
   const [customHabitInput, setCustomHabitInput] = useState('')
   const [customHabits, setCustomHabits] = useState<{ emoji: string; title: string; colour: string }[]>([])
+  const [habitStartDate, setHabitStartDate] = useState(() => new Date().toISOString().split('T')[0])
 
   // Step 5 — preferences
   const [studyDays, setStudyDays] = useState(['Mon','Tue','Wed','Thu','Fri'])
@@ -174,6 +175,7 @@ export function SetupWizard({ onComplete }: Props) {
         allHabits.forEach((h, i) => {
           addHabit({ title: h.title, emoji: h.emoji, colour: h.colour, unitId: null, frequency: 'daily', targetCount: 1, active: true, createdAt: today })
         })
+        updateProfile({ habitStartDate })
         setStep(5)
         return
       }
@@ -395,6 +397,15 @@ export function SetupWizard({ onComplete }: Props) {
               <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
                 Pick the habits you want to track every day. You can always add, edit or remove them later.
               </p>
+
+              <div className="rounded-xl p-4 mb-6" style={{ background:'var(--bg3)', border:'1px solid var(--accent)', borderColor:'var(--accent)' }}>
+                <Field label="When do you want to start tracking? (This becomes Day 1 / Week 1)">
+                  <input type="date" className="input" value={habitStartDate} onChange={e => setHabitStartDate(e.target.value)} />
+                </Field>
+                <p className="text-xs mt-1" style={{ color:'var(--text3)' }}>
+                  Choose today to start right now, or a past date to backfill your data.
+                </p>
+              </div>
 
               <div className="grid grid-cols-2 gap-2 mb-5">
                 {SUGGESTED_HABITS.map(s => {

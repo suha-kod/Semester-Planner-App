@@ -27,7 +27,7 @@ export default function SettingsPage() {
 
   function exportJSON() {
     const state = useStore.getState()
-    const data: AppData = { version:state.version, profile:state.profile, semesters:state.semesters, activeSemesterId:state.activeSemesterId, units:state.units, assessments:state.assessments, weeklyLogs:state.weeklyLogs, studyHours:state.studyHours, plannerTasks:state.plannerTasks, habits:state.habits, habitCheckIns:state.habitCheckIns }
+    const data: AppData = { version:state.version, profile:state.profile, semesters:state.semesters, activeSemesterId:state.activeSemesterId, units:state.units, assessments:state.assessments, weeklyLogs:state.weeklyLogs, studyHours:state.studyHours, plannerTasks:state.plannerTasks, habits:state.habits, habitCheckIns:state.habitCheckIns, moodEntries:state.moodEntries }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -55,7 +55,7 @@ export default function SettingsPage() {
 
   async function copyData() {
     const state = useStore.getState()
-    const data: AppData = { version:state.version, profile:state.profile, semesters:state.semesters, activeSemesterId:state.activeSemesterId, units:state.units, assessments:state.assessments, weeklyLogs:state.weeklyLogs, studyHours:state.studyHours, plannerTasks:state.plannerTasks, habits:state.habits, habitCheckIns:state.habitCheckIns }
+    const data: AppData = { version:state.version, profile:state.profile, semesters:state.semesters, activeSemesterId:state.activeSemesterId, units:state.units, assessments:state.assessments, weeklyLogs:state.weeklyLogs, studyHours:state.studyHours, plannerTasks:state.plannerTasks, habits:state.habits, habitCheckIns:state.habitCheckIns, moodEntries:state.moodEntries }
     try {
       await navigator.clipboard.writeText(JSON.stringify(data))
       setCopyStatus('✓ Copied!')

@@ -26,6 +26,14 @@ export interface Profile {
   studyStyle: StudyStyle
   remindDays: number
   theme: Theme
+  habitStartDate: string  // YYYY-MM-DD — day 1 / week 1 of habit tracking
+}
+
+export interface MoodEntry {
+  id: string
+  date: string        // YYYY-MM-DD
+  mood: number        // 1–10
+  motivation: number  // 1–10
 }
 
 export interface Semester {
@@ -136,6 +144,7 @@ export interface AppData {
   plannerTasks: PlannerTask[]
   habits: Habit[]
   habitCheckIns: HabitCheckIn[]
+  moodEntries: MoodEntry[]
 }
 
 // Derived / computed types

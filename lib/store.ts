@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import type {
   AppData, Profile, Semester, Unit, Assessment,
   WeeklyLog, WeeklyItem, StudyHour, PlannerTask,
-  Habit, HabitCheckIn,
+  Habit, HabitCheckIn, MoodEntry,
 } from '@/types'
 import { defaultAppData } from './migrations'
 import { loadFromDB, saveToDB } from './db'
@@ -58,6 +58,9 @@ interface TrackerStore extends AppData {
   deleteHabit: (id: string) => void
   setHabitCheckIn: (habitId: string, date: string, count: number) => void
 
+  // Mood / Mental State
+  setMoodEntry: (date: string, mood: number, motivation: number) => void
+
   // Data management
   importData: (data: AppData) => void
   resetAll: () => void
@@ -88,6 +91,7 @@ export const useStore = create<TrackerStore>((set, get) => ({
       plannerTasks: state.plannerTasks,
       habits: state.habits,
       habitCheckIns: state.habitCheckIns,
+      moodEntries: state.moodEntries,
     }
     saveToDB(data)
   },
@@ -258,6 +262,18 @@ export const useStore = create<TrackerStore>((set, get) => ({
         return { habitCheckIns: s.habitCheckIns.map(c => c.habitId === habitId && c.date === date ? { ...c, count } : c) }
       }
       return { habitCheckIns: [...s.habitCheckIns, { id: uid(), habitId, date, count }] }
+    })
+    get().persist()
+  },
+
+  // ── Mood ──────────────────────────────────────────────────────────────────
+  setMoodEntry: (date, mood, motivation) => {
+    set(s => {
+      const existing = s.moodEntries.find(e => e.date === date)
+      if (existing) {
+        return { moodEntries: s.moodEntries.map(e => e.date === date ? { ...e, mood, motivation } : e) }
+      }
+      return { moodEntries: [...s.moodEntries, { id: uid(), date, mood, motivation }] }
     })
     get().persist()
   },
