@@ -26,6 +26,7 @@ export interface Profile {
   studyStyle: StudyStyle
   remindDays: number
   theme: Theme
+  accentColor: string
   habitStartDate: string  // YYYY-MM-DD — day 1 / week 1 of habit tracking
 }
 

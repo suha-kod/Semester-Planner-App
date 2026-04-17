@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store'
 import { Sidebar } from './Sidebar'
 import { SetupWizard } from '../setup/SetupWizard'
 import { Toast } from '../ui/Toast'
+import { applyAccentTheme, type AccentTheme } from '@/lib/themes'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const hydrate = useStore(s => s.hydrate)
@@ -23,15 +24,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setShowSetup(!hasSetup)
   }, [hydrated, semesters])
 
-  // Apply theme to <html>
+  // Apply dark/light theme
   useEffect(() => {
     const root = document.documentElement
-    if (profile.theme === 'light') {
-      root.classList.add('light')
-    } else {
-      root.classList.remove('light')
-    }
+    if (profile.theme === 'light') root.classList.add('light')
+    else root.classList.remove('light')
   }, [profile.theme])
+
+  // Apply accent colour theme
+  useEffect(() => {
+    applyAccentTheme((profile.accentColor || 'pink') as AccentTheme, profile.theme === 'light')
+  }, [profile.accentColor, profile.theme])
 
   if (!hydrated) {
     return (

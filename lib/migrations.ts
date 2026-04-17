@@ -14,6 +14,7 @@ export function defaultProfile(): Profile {
     studyStyle: 'deadline',
     remindDays: 3,
     theme: 'dark',
+    accentColor: 'pink',
     habitStartDate: TODAY,
   }
 }
@@ -75,6 +76,7 @@ export function migrateData(raw: AppData): AppData {
   if (!data.habitCheckIns) data.habitCheckIns = []
   if (!data.moodEntries) data.moodEntries = []
   if (!data.profile.habitStartDate) data.profile.habitStartDate = TODAY
+  if (!data.profile.accentColor) data.profile.accentColor = 'pink'
 
   // Ensure planner tasks have new optional fields
   data.plannerTasks = (data.plannerTasks || []).map((t: any) => ({

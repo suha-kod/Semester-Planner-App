@@ -7,6 +7,7 @@ import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Field, ConfirmDialog, Alert } from '@/components/ui/index'
 import { toast } from '@/components/ui/Toast'
 import type { AppData } from '@/types'
+import { ACCENT_THEMES, type AccentTheme } from '@/lib/themes'
 
 export default function SettingsPage() {
   const profile = useStore(s => s.profile)
@@ -124,6 +125,29 @@ export default function SettingsPage() {
             </Field>
             <Field label="Remind me X days before deadline">
               <input type="number" className="input" value={profile.remindDays} onChange={e=>updateProfile({remindDays:parseInt(e.target.value)||3})} min={1} max={14} />
+            </Field>
+            <Field label="Accent colour">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {(Object.entries(ACCENT_THEMES) as [AccentTheme, typeof ACCENT_THEMES[AccentTheme]][]).map(([key, t]) => {
+                  const active = (profile.accentColor || 'pink') === key
+                  return (
+                    <button
+                      key={key}
+                      title={t.label}
+                      onClick={() => updateProfile({ accentColor: key })}
+                      style={{
+                        width: 32, height: 32, borderRadius: '50%',
+                        background: t.swatch, cursor: 'pointer',
+                        border: active ? `3px solid var(--text)` : '3px solid transparent',
+                        outline: active ? `2px solid ${t.swatch}` : 'none',
+                        outlineOffset: 2,
+                        transition: 'all 0.15s',
+                        transform: active ? 'scale(1.15)' : 'scale(1)',
+                      }}
+                    />
+                  )
+                })}
+              </div>
             </Field>
           </div>
 
