@@ -7,7 +7,7 @@ import { HabitFormModal } from '@/components/habits/HabitFormModal'
 import { toast } from '@/components/ui/Toast'
 import type { Habit } from '@/types'
 
-const WEEK_COLORS = ['#3b82f6','#60a5fa','#2dd4a0','#f472b6','#f5a623']
+const WEEK_COLORS = ['#ec4899','#60a5fa','#2dd4a0','#f472b6','#f5a623']
 const DAY_ABBR    = ['Su','Mo','Tu','We','Th','Fr','Sa']
 
 function addDays(base: Date, n: number): Date {
@@ -493,7 +493,7 @@ function HabitGrid({ weeks, days, dayWeekMap, activeHabits, todayISO, isChecked,
                 </div>
               </td>
               {days.map((d,di)=>{
-                const iso=isoFromDate(d); const wi=dayWeekMap[iso]; const wc=wi?.color||'#3b82f6'
+                const iso=isoFromDate(d); const wi=dayWeekMap[iso]; const wc=wi?.color||'#ec4899'
                 const checked=isChecked(h.id,iso); const future=iso>todayISO
                 return (
                   <td key={di} style={{ textAlign:'center', padding:'2px 1px', background:wc+'08' }}>
@@ -587,7 +587,7 @@ function MentalStateGrid({ weeks, days, dayWeekMap, todayISO, moodMap, scoreData
               <span style={{ fontSize:13 }}>😊</span> Mood
             </td>
             {days.map((d,di)=>{
-              const iso=isoFromDate(d); const wi=dayWeekMap[iso]; const wc=wi?.color||'#3b82f6'
+              const iso=isoFromDate(d); const wi=dayWeekMap[iso]; const wc=wi?.color||'#ec4899'
               const entry=moodMap[iso]; const future=iso>todayISO
               return (
                 <td key={di} style={{ textAlign:'center', padding:'2px 1px', background:wc+'08' }}>
@@ -608,7 +608,7 @@ function MentalStateGrid({ weeks, days, dayWeekMap, todayISO, moodMap, scoreData
               <span style={{ fontSize:13 }}>⚡</span> Motivation
             </td>
             {days.map((d,di)=>{
-              const iso=isoFromDate(d); const wi=dayWeekMap[iso]; const wc=wi?.color||'#3b82f6'
+              const iso=isoFromDate(d); const wi=dayWeekMap[iso]; const wc=wi?.color||'#ec4899'
               const entry=moodMap[iso]; const future=iso>todayISO
               return (
                 <td key={di} style={{ textAlign:'center', padding:'2px 1px', background:wc+'08' }}>

@@ -8,7 +8,7 @@ import { toast } from '@/components/ui/Toast'
 import type { Habit, HabitFrequency } from '@/types'
 import { isoFromDate } from '@/lib/weeks'
 
-const COLOURS = ['#3b82f6','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#93c5fd','#34d399','#fb923c','#e879f9']
+const COLOURS = ['#ec4899','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#f9a8d4','#34d399','#fb923c','#e879f9']
 const EMOJIS  = ['📖','💡','✍️','🧠','🎯','📝','⏰','🔁','💪','🏃','📚','🖥️','📐','🔬','✅']
 
 export function HabitFormModal({ open, onClose, editing }: { open: boolean; onClose: () => void; editing: Habit | null }) {

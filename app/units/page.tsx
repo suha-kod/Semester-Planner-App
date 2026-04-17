@@ -12,7 +12,7 @@ import { PlusIcon } from '@/components/layout/Icons'
 import type { Unit, UnitType } from '@/types'
 
 const WEEKLY_COMPONENTS = ['Lecture','Tutorial','Lab','Reading','Ed lesson','Discussion post','Practice questions','Weekly quiz','Notes / revision','Workshop']
-const UNIT_COLOURS = ['#3b82f6','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#93c5fd','#34d399']
+const UNIT_COLOURS = ['#ec4899','#2dd4a0','#f5a623','#f05252','#60a5fa','#f472b6','#f9a8d4','#34d399']
 
 // ── Weekly Task Grid ──────────────────────────────────────────────────────────
 function WeeklyTaskGrid({ unit, weeklyLogs, curWeek, totalWeeks, toggleWeeklyItem }: {

@@ -224,7 +224,7 @@ function OverviewTab() {
       })
       chartInstance.current = new Chart(chartRef.current, {
         type:'bar',
-        data:{ labels:last4.map(d=>d.label), datasets:[{ data:last4.map(d=>d.hrs), backgroundColor:'rgba(59,130,246,0.5)', borderColor:'#3b82f6', borderWidth:1, borderRadius:4 }] },
+        data:{ labels:last4.map(d=>d.label), datasets:[{ data:last4.map(d=>d.hrs), backgroundColor:'rgba(59,130,246,0.5)', borderColor:'#ec4899', borderWidth:1, borderRadius:4 }] },
         options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false},border:{display:false},ticks:{color:'#9d9ba8',font:{size:10}}}, y:{grid:{display:false},border:{display:false},ticks:{color:'#9d9ba8',font:{size:10}},beginAtZero:true} } }
       })
     })
