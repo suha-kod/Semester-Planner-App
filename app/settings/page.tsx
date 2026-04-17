@@ -43,7 +43,7 @@ export default function SettingsPage() {
     reader.onload = ev => {
       try {
         const data = JSON.parse(ev.target!.result as string) as AppData
-        if (!data.semester && !data.semesters) { toast('Invalid backup file','error'); return }
+        if (!data.semesters) { toast('Invalid backup file','error'); return }
         if (!confirm('Replace all current data with backup? This cannot be undone.')) return
         importData(data)
         toast('Data imported ✓','success')
@@ -76,7 +76,7 @@ export default function SettingsPage() {
   function applyPaste(text: string) {
     try {
       const data = JSON.parse(text.trim()) as AppData
-      if (!data.semesters && !data.semester) { toast('Invalid Tracker data','error'); return }
+      if (!data.semesters) { toast('Invalid Tracker data','error'); return }
       if (!confirm('Replace all data with pasted data?')) return
       importData(data)
       toast('Data loaded ✓','success')
