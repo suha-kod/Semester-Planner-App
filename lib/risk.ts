@@ -3,10 +3,10 @@
 import type { Unit, Assessment, WeeklyLog, RiskResult } from '@/types'
 import { daysUntil } from './weeks'
 
-/** Parse "Best N of M" (case-insensitive) from specialRules */
+/** Parse "Best/Top N of/out of M" (case-insensitive) from specialRules */
 export function parseBestOf(rules: string | null | undefined): { keep: number; total: number } | null {
   if (!rules) return null
-  const m = rules.match(/best\s+(\d+)\s+of\s+(\d+)/i)
+  const m = rules.match(/(?:best|top)\s+(\d+)\s+(?:out\s+of|of)\s+(\d+)/i)
   if (!m) return null
   const keep = parseInt(m[1]), total = parseInt(m[2])
   if (isNaN(keep) || isNaN(total) || keep <= 0 || total <= 0 || keep > total) return null
