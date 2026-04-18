@@ -67,6 +67,28 @@ export function weekDateRange(weekOffset = 0): { monday: Date; sunday: Date; day
   return { monday, sunday, days }
 }
 
+const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
+/** Compute YYYY-MM-DD for a given teaching week + day of week, skipping break weeks */
+export function teachingWeekDate(semStart: string, breakWeeks: number[], teachingWeek: number, dayName: string): string {
+  const start = new Date(semStart + 'T00:00:00')
+  const dow = start.getDay()
+  const toMon = dow === 0 ? -6 : 1 - dow
+  const startMon = new Date(start)
+  startMon.setDate(start.getDate() + toMon)
+  let calWeek = 1, tWeek = 0
+  while (tWeek < teachingWeek) {
+    if (!breakWeeks.includes(calWeek)) tWeek++
+    if (tWeek === teachingWeek) break
+    calWeek++
+  }
+  const weekMon = new Date(startMon)
+  weekMon.setDate(startMon.getDate() + (calWeek - 1) * 7)
+  const dayIdx = DAY_NAMES.indexOf(dayName)
+  weekMon.setDate(weekMon.getDate() + (dayIdx === -1 ? 0 : dayIdx))
+  return weekMon.toISOString().split('T')[0]
+}
+
 export function isoFromDate(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')

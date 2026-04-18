@@ -110,6 +110,8 @@ export interface PlannerTask {
   status?: 'not-started' | 'in-progress' | 'complete'
   notes?: string
   aiGenerated: boolean
+  targetWeek?: number | null
+  targetDeadlineDay?: string | null
 }
 
 export type HabitFrequency = 'daily' | 'weekly'
