@@ -17,6 +17,7 @@ import { currentWeekNumber, daysUntil, isoFromDate } from '@/lib/weeks'
 import { computeUnitRisk, computeCurrentMark, computeProjectedMark, neededMarkForTarget, resolveEffectiveWeights } from '@/lib/risk'
 import { buildPriorityList, generateRecommendations } from '@/lib/priority'
 import { StatCard, RiskBadge, ProgressBar, SectionHeading, EmptyState } from '@/components/ui/index'
+import { LogHoursButton } from '@/components/ui/LogHoursButton'
 import type { PriorityItem } from '@/types'
 
 const TABS = ['overview','priorities','hours','grades','risk'] as const
@@ -27,9 +28,12 @@ export default function InsightsPage() {
 
   return (
     <div className="p-8 max-w-screen-xl">
-      <div className="mb-7">
-        <h1 className="font-serif text-4xl font-light" style={{ color:'var(--text)' }}>Study Insights</h1>
-        <p className="text-sm mt-1" style={{ color:'var(--text3)' }}>Analytics, trends, and grade projections</p>
+      <div className="flex items-start justify-between mb-7">
+        <div>
+          <h1 className="font-serif text-4xl font-light" style={{ color:'var(--text)' }}>Study Insights</h1>
+          <p className="text-sm mt-1" style={{ color:'var(--text3)' }}>Analytics, trends, and grade projections</p>
+        </div>
+        <LogHoursButton />
       </div>
 
       <div className="flex gap-1 mb-6" style={{ borderBottom:'1px solid var(--border)' }}>
@@ -205,7 +209,9 @@ function OverviewTab() {
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstance = useRef<any>(null)
 
-  const totalHours = studyHours.reduce((s,h)=>s+h.hours,0)
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); weekStart.setHours(0,0,0,0)
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999)
+  const totalHours = studyHours.filter(h=>{ const d=new Date(h.date+'T00:00:00'); return d>=weekStart&&d<=weekEnd }).reduce((s,h)=>s+h.hours,0)
   const graded = assessments.filter(a=>a.mark!==null&&a.mark!==undefined)
   const avgMark = graded.length>0 ? graded.reduce((s,a)=>s+(a.mark!/(a.maxMark||100)*100),0)/graded.length : null
 
@@ -234,7 +240,7 @@ function OverviewTab() {
   return (
     <div>
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total study hours" value={totalHours.toFixed(1)} colour="teal" sub="logged this semester" />
+        <StatCard label="Study hours" value={totalHours.toFixed(1)} colour="teal" sub="logged this week" />
         <StatCard label="Assessments done" value={`${graded.length}/${assessments.length}`} colour="accent" sub="graded / total" />
         <StatCard label="Avg mark" value={avgMark!==null?`${avgMark.toFixed(1)}%`:'—'} colour={avgMark!==null?(avgMark>=70?'green':avgMark>=50?'amber':'red'):'default'} sub="across graded work" />
         <StatCard label="Current week" value={`${curWeek}/${semester?.totalWeeks??13}`} sub="semester progress" />

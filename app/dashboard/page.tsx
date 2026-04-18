@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { isoFromDate } from '@/lib/weeks'
 import { HabitFormModal } from '@/components/habits/HabitFormModal'
+import { LogHoursButton } from '@/components/ui/LogHoursButton'
 import { toast } from '@/components/ui/Toast'
 import type { Habit } from '@/types'
 
@@ -268,6 +269,7 @@ export default function DashboardPage() {
             <button className="btn btn-ghost btn-sm" onClick={()=>setBlockOffset(Math.max(0,Math.floor(diffDays(new Date(),startDate)/35)))}>Now</button>
           )}
           <button className="btn btn-ghost btn-sm" onClick={()=>setBlockOffset(o=>o+1)}>Next →</button>
+          <LogHoursButton />
           <button className="btn btn-primary btn-sm" onClick={()=>{setEditHabit(null);setShowForm(true)}}>+ Habit</button>
         </div>
       </div>
