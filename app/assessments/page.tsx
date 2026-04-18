@@ -6,7 +6,7 @@ import { fmtDate, daysUntil, currentWeekNumber } from '@/lib/weeks'
 import { StatusBadge, CountdownChip, EmptyState, ConfirmDialog } from '@/components/ui/index'
 import { toast } from '@/components/ui/Toast'
 import { PlusIcon, TrashIcon } from '@/components/layout/Icons'
-import { computeUnitRisk, effectiveWeight, parseBestOf } from '@/lib/risk'
+import { computeUnitRisk, effectiveWeight, parseBestOf, resolveEffectiveWeights } from '@/lib/risk'
 import { AssessmentFormModal } from '@/components/assessments/AssessmentFormModal'
 import type { Assessment, AssessmentType, AssessmentStatus } from '@/types'
 
@@ -38,6 +38,12 @@ export default function AssessmentsPage() {
     })
     return map
   }, [units, assessments, weeklyLogs, curWeek])
+
+  // Resolved weights map: id → effective weight (0 = dropped from best-of group)
+  const resolvedWeightMap = useMemo(() => {
+    const resolved = resolveEffectiveWeights(assessments)
+    return new Map(resolved.map(a => [a.id, a.weight]))
+  }, [assessments])
 
   const filtered = useMemo(() => {
     const submitted = ['submitted','graded','complete']
@@ -102,18 +108,26 @@ export default function AssessmentsPage() {
                   const unit = units.find(u=>u.id===a.unitId)
                   const hasMark = a.mark!==null&&a.mark!==undefined
                   const markPct = hasMark?Math.round(a.mark!/( a.maxMark||100)*100):null
+                  const bestOfRule = parseBestOf(a.specialRules)
+                  const resolvedW = resolvedWeightMap.get(a.id) ?? a.weight
+                  const isDropped = bestOfRule && hasMark && resolvedW === 0
+                  const isCounted = bestOfRule && hasMark && resolvedW > 0
                   return (
-                    <tr key={a.id} onClick={()=>{setEditing(a);setShowForm(true)}} style={{ borderBottom:'1px solid var(--border)', cursor:'pointer' }}
+                    <tr key={a.id} onClick={()=>{setEditing(a);setShowForm(true)}} style={{ borderBottom:'1px solid var(--border)', cursor:'pointer', opacity: isDropped ? 0.6 : 1 }}
                       onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--bg3)'}
                       onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=''}>
                       <td style={{ padding:'12px 14px', color:'var(--text)', fontWeight:500 }}>
-                        {a.name}
+                        <div className="flex items-center gap-2">
+                          {a.name}
+                          {isCounted && <span style={{ fontSize:10, background:'var(--green)', color:'#fff', borderRadius:4, padding:'1px 5px', fontWeight:600 }}>counted</span>}
+                          {isDropped && <span style={{ fontSize:10, background:'var(--bg4)', color:'var(--text3)', borderRadius:4, padding:'1px 5px' }}>dropped</span>}
+                        </div>
                         {a.specialRules&&<div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>{a.specialRules}</div>}
                       </td>
                       <td style={{ padding:'12px 14px' }}><span className="chip chip-future text-xs">{unit?.code??'—'}</span></td>
                       <td style={{ padding:'12px 14px', color:'var(--text2)', textTransform:'capitalize' }}>{a.type}</td>
                       <td style={{ padding:'12px 14px', fontFamily:'var(--font-mono)', color:'var(--text)' }}>
-                        {parseBestOf(a.specialRules)
+                        {bestOfRule
                           ? <><span>{effectiveWeight(a).toFixed(2).replace(/\.?0+$/, '')}%</span><span style={{ fontSize:10, color:'var(--text3)', marginLeft:4 }}>({a.weight}% total)</span></>
                           : <>{a.weight}%</>}
                       </td>
