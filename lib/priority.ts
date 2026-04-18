@@ -2,6 +2,7 @@
 
 import type { Assessment, Unit, WeeklyLog, PriorityItem } from '@/types'
 import { daysUntil } from './weeks'
+import { resolveEffectiveWeights, effectiveWeight } from './risk'
 
 export function buildPriorityList(
   assessments: Assessment[],
@@ -10,6 +11,8 @@ export function buildPriorityList(
   currentWeek: number,
 ): PriorityItem[] {
   const items: PriorityItem[] = []
+  const resolved = resolveEffectiveWeights(assessments)
+  const resolvedMap = new Map(resolved.map(a => [a.id, a.weight]))
 
   assessments.forEach(a => {
     if (['submitted', 'graded', 'complete'].includes(a.status)) return
@@ -17,10 +20,12 @@ export function buildPriorityList(
     if (days === null) return
     const unit = units.find(u => u.id === a.unitId)
     const diff = unit?.difficulty ?? 5
-    const score = (21 - Math.max(0, days)) * 5 + a.weight * 0.5 + diff * 2
+    const effW = resolvedMap.get(a.id) ?? a.weight
+    const score = (21 - Math.max(0, days)) * 5 + effW * 0.5 + diff * 2
+    const dispW = effectiveWeight(a)
     items.push({
       name: a.name,
-      meta: `${unit?.code ?? '?'} · Due ${days < 0 ? 'overdue' : days === 0 ? 'today' : `in ${days}d`} · ${a.weight}% weight`,
+      meta: `${unit?.code ?? '?'} · Due ${days < 0 ? 'overdue' : days === 0 ? 'today' : `in ${days}d`} · ${dispW}% weight`,
       score,
       urgency: days < 0 || days <= 2 ? 'urgent' : days <= 7 ? 'soon' : '',
       unitCode: unit?.code,
