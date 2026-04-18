@@ -90,7 +90,7 @@ export function computeUnitRisk(
   const resolved = resolveEffectiveWeights(active)
   const soonHeavy = resolved.filter(a => {
     const d = daysUntil(a.dueDate)
-    return d !== null && d >= 0 && d <= 7 && a.weight >= 10
+    return d !== null && d >= 0 && d <= 7 && a.weight >= 10 && a.type !== 'quiz'
   })
   if (soonHeavy.length > 0) {
     score += soonHeavy.length * 20 * (unit.difficulty / 5)
